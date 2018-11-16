@@ -1,0 +1,3 @@
+[ libdetCal.so ]
+# List of selected classes
+class detCal
