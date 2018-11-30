@@ -1,14 +1,26 @@
-#include<vector>
-#include<string>
+#include <vector>
+#include <string>
+#include <atomic>
+
+#include "TH2D.h"
+#include "TTreeReader.h"
+#include "TTreeReaderValue.h"
+#include "TFileCollection.h"
+#include "TCollection.h"
+#include "TChain.h"
+#include "THashList.h"
+#include "TThread.h"
+
+#include "./detCal.h"
 
 TH2D* ConstructEng( TFileCollection* fc )
 {
-    gSystem->Load("./libdetCal.so");
+    //gSystem->Load("./libdetCal.so");
     detCal* Channel = new detCal("./XPConfig.txt");
 
     TH2D* engMat = new TH2D("engMat", "Energy Matrix",
             100, 0, 100,
-            5000, 0, 5000);
+            9000, 0, 9000);
 
     // Load Lst2RootTree's into chain
     TChain* pChain = new TChain("Lst2RootTree");
@@ -19,8 +31,6 @@ TH2D* ConstructEng( TFileCollection* fc )
     TTreeReaderValue<short> adc(TreeR, "adc");
     TTreeReaderValue<int> multiplicity(TreeR, "multiplicity");
 
-    // Array for holding all energies in coincidence
-   
     bool vito = false; 
     printf("Constructing energy matrix\n");
     while ( TreeR.Next() ) {
@@ -31,8 +41,9 @@ TH2D* ConstructEng( TFileCollection* fc )
             continue;
         engMat->Fill(
                 *adc,
-                Channel->GetEnergy( *energy, *adc ) );
+                Channel->GetEnergy( (double) *energy, *adc ) );
     }
+
     delete Channel;
     delete pChain;
     return engMat;

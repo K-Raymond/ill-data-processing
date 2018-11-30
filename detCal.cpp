@@ -36,7 +36,8 @@ int detCal::loadCal(std::string XPConfig)
         {
             continue; // Skip this line
         }
-        LineStream = std::istringstream(Line);
+
+        LineStream.str(Line); // set stream to Line
 
         //#chan dettype isTr cal0 cal1 rangemin rangemax
         LineStream >> ChanN >> detType >> isTr;
@@ -49,7 +50,7 @@ int detCal::loadCal(std::string XPConfig)
         fCal1Vec.push_back(cal0);
         fDetTypeVec.push_back(detType);
     }
-    printf("Loaded in %d channels\n", fCal0Vec.size() );
+    printf("Loaded in %d channels\n", (int) fCal0Vec.size() );
     return EXIT_SUCCESS;
 }
 
