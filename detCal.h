@@ -4,8 +4,11 @@
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
 #include <float.h>
 #include <math.h>
+
+#include "TRandom.h"
 
 // Enumerator for choosing which type of energy calibration
 enum CalType {
@@ -27,7 +30,7 @@ class detCal{
         void exportCal(std::string XPConfig);
 
         /* Energy calibration functions */
-        double_t GetEnergy(double_t Q, int nDet, CalType Interpol = LINEAR );
+        double_t GetEnergy(int32_t &Q, short &nDet, CalType Interpol = LINEAR );
         double_t GetCal( int nCoeff, int nDet );
         void SetCal( int nCoeff, int nDet , double_t Coeff);
 

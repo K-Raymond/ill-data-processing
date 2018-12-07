@@ -36,7 +36,6 @@ int detCal::loadCal(std::string XPConfig)
         {
             continue; // Skip this line
         }
-
         LineStream.str(Line); // set stream to Line
 
         //#chan dettype isTr cal0 cal1 rangemin rangemax
@@ -49,11 +48,15 @@ int detCal::loadCal(std::string XPConfig)
         fCal0Vec.push_back(cal1);
         fCal1Vec.push_back(cal0);
         fDetTypeVec.push_back(detType);
+
+        LineStream.clear();
     }
     printf("Loaded in %d channels\n", (int) fCal0Vec.size() );
     return EXIT_SUCCESS;
 }
 
+// Export current experimental config in the same way as
+// XPConfig would be.
 void detCal::exportCal(std::string XPConfig)
 {
     std::ofstream XPOut;
@@ -64,6 +67,7 @@ void detCal::exportCal(std::string XPConfig)
         return;
     }
 
+    // Standard header
     XPOut << "#chan dettype isTr cal0 cal1 rangemin rangemax" << std::endl;
 
     // For the XPConfig, cal0*x + cal1 rather than the standard polynomial
@@ -82,12 +86,15 @@ void detCal::exportCal(std::string XPConfig)
     return;
 }
 
-double_t detCal::GetEnergy(double_t Q, int nDet, CalType Interpol)
+// Convert charge Q to an energy value
+double_t detCal::GetEnergy(int32_t &Q, short &nDet, CalType Interpol)
 {
+    //double_t E = (double_t)Q + (double_t)rand()/( (double_t)RAND_MAX + 1.0);
+    double_t E = (double_t)Q + gRandom->Uniform();
     switch(Interpol)
     {
         case LINEAR:
-            return fCal0Vec[nDet] + fCal1Vec[nDet]*Q;
+            return fCal0Vec[nDet] + fCal1Vec[nDet]*E;
 
         case QUADRADIC:
             if ( fCal2Vec.size() == 0 )
@@ -95,7 +102,7 @@ double_t detCal::GetEnergy(double_t Q, int nDet, CalType Interpol)
                 printf("No information for 2nd calibration number\n");
                 return 0.0;
             }
-            return fCal0Vec[nDet] + fCal1Vec[nDet]*Q + fCal2Vec[nDet]*Q*Q;
+            return fCal0Vec[nDet] + fCal1Vec[nDet]*E + fCal2Vec[nDet]*E*E;
     }
 }
 
