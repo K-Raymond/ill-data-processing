@@ -47,6 +47,7 @@ int detCal::loadCal(std::string XPConfig)
         // for this class they need to be rearanged
         fCal0Vec.push_back(cal1);
         fCal1Vec.push_back(cal0);
+        fisTrVec.push_back(isTr);
         fDetTypeVec.push_back(detType);
 
         LineStream.clear();
@@ -76,7 +77,7 @@ void detCal::exportCal(std::string XPConfig)
     {
         XPOut << i << " ";
         XPOut << fDetTypeVec[i] << " ";
-        XPOut << "1 "; // isTr
+        XPOut << fisTrVec[i]; // isTr
         XPOut << fCal1Vec[i] << " ";
         XPOut << fCal0Vec[i] << " ";
         XPOut << "0 32768" << std::endl;
@@ -131,12 +132,21 @@ void detCal::SetCal( int nCoeff, int nDet, double_t Coeff )
 
 bool detCal::isVito(int nDet)
 {
-    if( fvitoVec.size() == 0 )
+    if( fDetTypeVec.size() == 0 )
     {
-        printf("detCal ERROR: No vito information for channel %d\n", nDet);
+        printf("detCal ERROR: No vito/detc information for channel %d\n", nDet);
         return EXIT_FAILURE;
     }
-    return fvitoVec[nDet];
+    
+    // check trigger
+    if( fisTrVec[nDet] == 0 )
+        return true;
+
+    // check detector type
+    if( fDetTypeVec[nDet] == 1 )
+        return false; // HPGe
+    if( fDetTypeVec[nDet] == -1 )
+        return true; // BGO Shield
 }
 
 void detCal::stateVitoDet( int nDet, bool state )

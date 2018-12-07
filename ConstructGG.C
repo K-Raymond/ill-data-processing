@@ -18,8 +18,8 @@ TH2D* ConstructGG( TFileCollection* fc )
     detCal* Channel = new detCal("./XPConfig.txt");
 
     TH2D* ggMat = new TH2D("ggMat", "Gamma Gamma Coincidence",
-            10000, 0, 10000,
-            10000, 0, 10000);
+            8191, 0, 12000,
+            8191, 0, 12000);
 
     // Load Lst2RootTree's into chain
     TChain* pChain = new TChain("Lst2RootTree");
@@ -37,9 +37,16 @@ TH2D* ConstructGG( TFileCollection* fc )
     printf("Constructing gamma gamma matrix\n");
     while ( TreeR.Next() ) {
         // Find the size of the packet
+        vito = false;
         eventMulti = *multiplicity;
-        if( eventMulti == 1 ) // if == 1
+        if( eventMulti == 1 ) // if == 1 skip
             continue;
+        
+        for( int i = 0; i < eventMulti; i++ )
+        {
+           if( Channel->isVito( adc[i] ) )
+               vito = true;
+        }
 
         // Check if result is valid
         if( !vito )

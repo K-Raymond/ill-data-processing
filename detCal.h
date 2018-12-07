@@ -56,6 +56,7 @@ class detCal{
 
         // Vito list
         std::vector<bool> fvitoVec; 
+        std::vector<int> fisTrVec;
 
         // Detector type
         std::vector<int> fDetTypeVec;
