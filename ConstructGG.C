@@ -15,6 +15,7 @@
 #include "./detCal.h"
 #include "./progressThread.h"
 
+// Global Variables for this file
 static long long int TotalEntries;
 static long long int PartialEntries;
 static bool GO = true;
@@ -23,17 +24,131 @@ static void* UpdateProgress(void *ptr)
 {
     while( GO == true )
     {
+        // Thread safe printing with global mutex
         TThread::Lock();
-        printf("\rProgress %.2f%%, %lld of %lld", 
+        printf("\rProgress %.2f%%, %.1f of %.1f", 
                 100*PartialEntries/(double)TotalEntries,
-                PartialEntries,
-                TotalEntries);
+                (double) PartialEntries,
+                (double) TotalEntries);
         TThread::UnLock();
 
-        // sleep in milliseconds
         gSystem->Sleep(20);
     }
     return NULL;
+}
+
+// Timing functions
+
+static bool isTimeRandom( int16_t Time1, int16_t Time2 )
+{
+    int16_t ggBTLow = 500; // *10ns
+    int16_t ggBTHigh = 2000;
+    return abs(Time1 - Time2) > ggBTLow && abs(Time1 - Time2) < ggBTHigh ;
+}
+
+static bool isTimePrompt( int16_t Time1, int16_t Time2 )
+{
+    int16_t ggTLow = 0; // *10ns
+    int16_t ggTHigh = 50;
+    return abs(Time1 - Time2) > ggTLow && abs(Time1 - Time2) < ggTHigh ;
+}
+
+static TList* TimingCoincidence( TFileCollection* fc )
+{
+    // Load Experimental Config
+    detCal* Channel = new detCal("./XPConfig.txt");
+
+    // Start progress bar
+    printf("\rProgress %.2f%%, %.1f of %.1f", 
+            100*PartialEntries/(double)TotalEntries,
+            (double) PartialEntries,
+            (double) TotalEntries);
+    TThread *t1 = new TThread("t1", UpdateProgress, NULL);
+    t1->Run();
+
+    // Load Lst2RootTree's into a TChain
+    TChain* pChain = new TChain("Lst2RootTree");
+    pChain->AddFileInfoList( fc->GetList() );
+
+    // Load events TTree into TTreeReader:
+    // The data types used are taken from the code used to produce
+    // the original trees.
+    TTreeReader TreeR(pChain);
+    TotalEntries = TreeR.GetEntries(true);
+    TTreeReaderArray<int32_t> energy(TreeR, "energy");
+    TTreeReaderArray<int16_t> adc(TreeR, "adc");
+    TTreeReaderArray<int16_t> timeStamp(TreeR, "timeStamp");
+    TTreeReaderValue<int> multiplicity(TreeR, "multiplicity");
+
+
+    // Setup histograms for export
+    TList* outList = new TList();
+
+    // Make Matricies here (1 keV/bin)
+    TH2D* ggMatPrompt = new TH2D("ggMatPrompt", "Prompt #gamma-#gamma Coincidence",
+            16383, 0, 16383,
+            16383, 0, 16383);
+    outList->Add(ggMatPrompt);
+    TH2D* ggMatRand = new TH2D("ggMatRand", "Random #gamma-#gamma Coincidence",
+            16383, 0, 16383,
+            16383, 0, 16383);
+    outList->Add(ggMatRand);
+    TH1D* ggTimeDiff = new TH1D("ggTimeDiff", "#gamma-#gamma time difference",
+            511, 0, 4095);
+    outList->Add(ggTimeDiff);
+
+    int eventMulti;
+
+    //  Parse through TTree
+    while ( TreeR.Next() )
+    {
+        eventMulti = *multiplicity;
+
+        // Avoid race conditions with mutexs (necessary? TODO)
+        //while(TThread::TryLock()) {}
+        PartialEntries++;
+        //TThread::UnLock();
+
+        // No single events
+        if( eventMulti == 1 ) // if == 1 skip
+            continue;      
+
+        // fill group of events if not vito
+        // ie, no BGO hits in event packet
+        for( int i = 0; i < eventMulti; i++ )
+            for( int j = i+1; j < eventMulti; j++ )
+            {
+                if( Channel->isVito( adc[i] ) || Channel->isVito( adc[j] ) )
+                    continue;
+                // No coincidence with underflow or overflow
+                if( energy[i] < 2 || energy[j] < 2 )
+                    continue;
+                if( energy[i] > 32760 || energy[j] > 32760 )
+                    continue;
+
+                ggTimeDiff->Fill( abs(timeStamp[i] - timeStamp[j]) );
+                // Populate the two GG Mats
+                if ( isTimeRandom( timeStamp[i], timeStamp[j] ) )
+                    ggMatRand->Fill( Channel->GetEnergy( energy[i], adc[i] ),
+                            Channel->GetEnergy( energy[j], adc[j] ));
+                if ( isTimePrompt( timeStamp[i], timeStamp[j] ) )
+                    ggMatPrompt->Fill( Channel->GetEnergy( energy[i], adc[i] ),
+                            Channel->GetEnergy( energy[j], adc[j] ));
+            }
+
+    }
+
+    // Stop thread that displays progress and print final progress
+    GO = false;
+    printf("\rProgress %.2f%%, %.1f of %.1f", 
+            100*PartialEntries/(double)TotalEntries,
+            (double) PartialEntries,
+            (double) TotalEntries);
+
+    // Cleanup
+    delete Channel;
+    delete pChain;
+    return outList;
 }
 
 TH2D* ConstructGG( TFileCollection* fc )
@@ -56,6 +171,7 @@ TH2D* ConstructGG( TFileCollection* fc )
     TotalEntries = TreeR.GetEntries(true);
     TTreeReaderArray<int32_t> energy(TreeR, "energy");
     TTreeReaderArray<int16_t> adc(TreeR, "adc");
+    TTreeReaderArray<int16_t> timeStamp(TreeR, "timeStamp");
     TTreeReaderValue<int> multiplicity(TreeR, "multiplicity");
 
     TH2D* ggMat = new TH2D("ggMat", "Gamma Gamma Coincidence",
@@ -117,13 +233,20 @@ TH2D* ConstructGG( std::string TFileList )
     return ConstructGG( fc );
 }
 
+TList* TimingCoincidence( std::string TFileList )
+{
+    TFileCollection* fc = new TFileCollection( "RootFileList", "", TFileList.c_str() );
+    return TimingCoincidence( fc );
+}
+
 /*
 TH2D* ConstructGGParallel( std::string TFileList )
 {
     TFileCollection* fc = new TFileCollection( "RootFileList", "", TFileList.c_str() );
     ROOT::EnableThreadSafety();
 
-    ROOT::MakeThreaded<TH2F> ParHisto("ParHisto", "gg", 8191, 0, 12000, 8191, 0, 12000);
+    ROOT::MakeThreaded<TH2F> ParHisto("ParHisto", "#gamma-#gamma",
+        8191, 0, 12000, 8191, 0, 12000);
     ROOT::TTreeProcessor
 
 */
