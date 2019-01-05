@@ -39,14 +39,14 @@ static void* UpdateProgress(void *ptr)
 
 // Timing functions
 
-static bool isTimeRandom( int16_t Time1, int16_t Time2 )
+static bool isTimeRandom( int16_t &Time1, int16_t &Time2 )
 {
     int16_t ggBTLow = 500; // *10ns
     int16_t ggBTHigh = 2000;
     return abs(Time1 - Time2) > ggBTLow && abs(Time1 - Time2) < ggBTHigh ;
 }
 
-static bool isTimePrompt( int16_t Time1, int16_t Time2 )
+static bool isTimePrompt( int16_t &Time1, int16_t &Time2 )
 {
     int16_t ggTLow = 0; // *10ns
     int16_t ggTHigh = 50;
@@ -88,14 +88,22 @@ static TList* TimingCoincidence( TFileCollection* fc )
     TH2D* ggMatPrompt = new TH2D("ggMatPrompt", "Prompt #gamma-#gamma Coincidence",
             16383, 0, 16383,
             16383, 0, 16383);
-    outList->Add(ggMatPrompt);
     TH2D* ggMatRand = new TH2D("ggMatRand", "Random #gamma-#gamma Coincidence",
             16383, 0, 16383,
             16383, 0, 16383);
+    outList->Add(ggMatPrompt);
     outList->Add(ggMatRand);
+
+    // Time histograms
     TH1D* ggTimeDiff = new TH1D("ggTimeDiff", "#gamma-#gamma time difference",
             511, 0, 4095);
+    TH1D* ggTimeDiffBGO = new TH1D("ggTimeDiffBGO", "#gamma-#gamma time difference involving BGO",
+            511, 0, 4095);
+    TH1D* ggTimeDiffHPGe = new TH1D("ggTimeDiffHPGe", "#gamma-#gamma time difference of other detectors",
+            511, 0, 4095);
     outList->Add(ggTimeDiff);
+    outList->Add(ggTimeDiffBGO);
+    outList->Add(ggTimeDiffHPGe);
 
     int eventMulti;
 
@@ -118,16 +126,23 @@ static TList* TimingCoincidence( TFileCollection* fc )
         for( int i = 0; i < eventMulti; i++ )
             for( int j = i+1; j < eventMulti; j++ )
             {
-                if( Channel->isVito( adc[i] ) || Channel->isVito( adc[j] ) )
-                    continue;
                 // No coincidence with underflow or overflow
                 if( energy[i] < 2 || energy[j] < 2 )
                     continue;
                 if( energy[i] > 32760 || energy[j] > 32760 )
                     continue;
 
+                if( Channel->isBGO( adc[i] ) || Channel->isBGO( adc[j] ) )
+                    ggTimeDiffBGO->Fill( abs(timeStamp[i] - timeStamp[j] ) );
+                else
+                    ggTimeDiffHPGe->Fill( abs(timeStamp[i] - timeStamp[j] ) );
+
+                // Vito detectors
+                if( Channel->isVito( adc[i] ) || Channel->isVito( adc[j] ) )
+                    continue;
+                
                 ggTimeDiff->Fill( abs(timeStamp[i] - timeStamp[j]) );
-                // Populate the two GG Mats
+
                 if ( isTimeRandom( timeStamp[i], timeStamp[j] ) )
                     ggMatRand->Fill( Channel->GetEnergy( energy[i], adc[i] ),
                             Channel->GetEnergy( energy[j], adc[j] ));

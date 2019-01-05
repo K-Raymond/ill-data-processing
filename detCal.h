@@ -39,6 +39,7 @@ class detCal{
         // For instance, if the detector is marked as
         // a BGO shield, these events should be ignored.
         bool isVito(int nDet);
+        bool isBGO(int nDet) { if( fDetTypeVec[nDet] == -1) return true; return false; }
 
         // Set the state of the detector
         void stateVitoDet(int nDet, bool state);

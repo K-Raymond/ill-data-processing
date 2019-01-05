@@ -77,7 +77,7 @@ void detCal::exportCal(std::string XPConfig)
     {
         XPOut << i << " ";
         XPOut << fDetTypeVec[i] << " ";
-        XPOut << fisTrVec[i]; // isTr
+        XPOut << fisTrVec[i] << " "; // isTr
         XPOut << fCal1Vec[i] << " ";
         XPOut << fCal0Vec[i] << " ";
         XPOut << "0 32768" << std::endl;

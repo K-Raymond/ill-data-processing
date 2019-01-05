@@ -14,14 +14,14 @@
 
 #include "./detCal.h"
 
-TH2* ConstructEng( TFileCollection* fc )
+TH2* ConstructEng( TFileCollection* fc, std::string fCal)
 {
     //gSystem->Load("./libdetCal.so");
-    detCal* Channel = new detCal("./XPConfig.txt");
+    detCal* Channel = new detCal(fCal);
 
     TH2D* engMat = new TH2D("qMat", "Charge Matrix",
             98, 0, 98,
-            32767, 0, 12000);
+            32767, 0, 16383);
 
     // Load Lst2RootTree's into chain
     TChain* pChain = new TChain("Lst2RootTree");
@@ -48,8 +48,9 @@ TH2* ConstructEng( TFileCollection* fc )
             charge = energy[i];
             address = adc[i];
 
-            if ( charge < 2 )
-                continue;
+            if ( charge < 2 ) continue;
+            if ( charge > 32760 ) continue;
+
             engMat->Fill(
                     address,
                     Channel->GetEnergy( charge, address ) );
@@ -61,8 +62,16 @@ TH2* ConstructEng( TFileCollection* fc )
     return engMat;
 }
 
-TH2* ConstructEng( std::string TFileList )
+TH2* ConstructEng( std::string TFileList , std::string fCal)
 {
     TFileCollection* fc = new TFileCollection( "RootFileList", "", TFileList.c_str() );
-    return ConstructEng( fc );
+    return ConstructEng( fc, fCal );
+}
+
+// Default
+TH2* ConstructEng( std::string TFileList )
+{
+    TFileCollection* fc = new TFileCollection( "RootFileList",
+            "", TFileList.c_str() );
+    return ConstructEng( fc, "./XPConfig.txt");
 }

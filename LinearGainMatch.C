@@ -1,13 +1,15 @@
 #include <vector>
 
-void LinearGainMatch( TH2D* mat_en ) {
+void LinearGainMatch( TH2* mat_en, double peak1 = 344.28, double width1 = 20,
+        double peak2 = 344.28, double width2 = 20, std::string fCal = "./XPConfig.txt" ) {
     // Two points for rough gain match
     // Eu152 main peaks
-    double_t gCalPeaks[2][2] = { {344.28, 20}, {1408.0, 20} };
+    double_t gCalPeaks[2][2] = { {peak1, width1}, {peak2, width2} };
+    //double_t gCalPeaks[2][2] = { {344.28, 20}, {1408.0, 20} };
     double_t MeasuredPeaks[2];
     
     gSystem->Load("./libdetCal.so");
-    detCal* pChannel = new detCal("./XPConfig.txt");
+    detCal* pChannel = new detCal(fCal);
     
     vector<double_t> newCal0;
     vector<double_t> newCal1;
