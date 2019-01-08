@@ -11,6 +11,7 @@
 #include "TROOT.h"
 #include "THashList.h"
 #include "TThread.h"
+#include "TFile.h"
 
 #include "./detCal.h"
 #include "./progressThread.h"
@@ -39,17 +40,20 @@ static void* UpdateProgress(void *ptr)
 
 // Timing functions
 
+
+static int16_t ggBTLow = 500; // *10ns
+static int16_t ggBTHigh = 2000;
+
+static int16_t ggTLow = 0; // *10ns
+static int16_t ggTHigh = 50;
+
 static bool isTimeRandom( int16_t &Time1, int16_t &Time2 )
 {
-    int16_t ggBTLow = 500; // *10ns
-    int16_t ggBTHigh = 2000;
     return abs(Time1 - Time2) > ggBTLow && abs(Time1 - Time2) < ggBTHigh ;
 }
 
 static bool isTimePrompt( int16_t &Time1, int16_t &Time2 )
 {
-    int16_t ggTLow = 0; // *10ns
-    int16_t ggTHigh = 50;
     return abs(Time1 - Time2) > ggTLow && abs(Time1 - Time2) < ggTHigh ;
 }
 
@@ -86,13 +90,17 @@ static TList* TimingCoincidence( TFileCollection* fc )
 
     // Make Matricies here (1 keV/bin)
     TH2D* ggMatPrompt = new TH2D("ggMatPrompt", "Prompt #gamma-#gamma Coincidence",
-            16383, 0, 16383,
-            16383, 0, 16383);
+            10000, 0, 10000,
+            10000, 0, 10000);
     TH2D* ggMatRand = new TH2D("ggMatRand", "Random #gamma-#gamma Coincidence",
-            16383, 0, 16383,
-            16383, 0, 16383);
+            10000, 0, 10000,
+            10000, 0, 10000);
+    TH2D* ggBS = new TH2D("ggBS", "#gamma-#gamma Coincidence Background Subtracted",
+            10000, 0, 10000,
+            10000, 0, 10000);
     outList->Add(ggMatPrompt);
     outList->Add(ggMatRand);
+    outList->Add(ggBS);
 
     // Time histograms
     TH1D* ggTimeDiff = new TH1D("ggTimeDiff", "#gamma-#gamma time difference",
@@ -105,12 +113,19 @@ static TList* TimingCoincidence( TFileCollection* fc )
     outList->Add(ggTimeDiffBGO);
     outList->Add(ggTimeDiffHPGe);
 
+    // Plot the histogram that shows the size of the event packets
+    TH1D* hEvntPacket = new TH1D("hEvntPacket",
+            "#gamma-#gamma multiplicty of events",
+            200, 0, 200);
+    outList->Add(multi);
     int eventMulti;
 
     //  Parse through TTree
     while ( TreeR.Next() )
     {
         eventMulti = *multiplicity;
+
+        hEvntPacket->Fill(eventMulti);
 
         // Avoid race conditions with mutexs (necessary? TODO)
         //while(TThread::TryLock()) {}
@@ -147,18 +162,25 @@ static TList* TimingCoincidence( TFileCollection* fc )
                     ggMatRand->Fill( Channel->GetEnergy( energy[i], adc[i] ),
                             Channel->GetEnergy( energy[j], adc[j] ));
                 if ( isTimePrompt( timeStamp[i], timeStamp[j] ) )
+                {
                     ggMatPrompt->Fill( Channel->GetEnergy( energy[i], adc[i] ),
                             Channel->GetEnergy( energy[j], adc[j] ));
+                }
+
             }
 
     }
 
     // Stop thread that displays progress and print final progress
     GO = false;
-    printf("\rProgress %.2f%%, %.1f of %.1f", 
+    printf("\rProgress %.2f%%, %.1f of %.1f\n", 
             100*PartialEntries/(double)TotalEntries,
             (double) PartialEntries,
             (double) TotalEntries);
+
+    // Construct background subtracted gg matrix
+    ggBS->Add(ggMatPrompt);
+    ggBS->Add(ggMatRand, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
 
     // Cleanup
     delete Channel;
@@ -252,6 +274,17 @@ TList* TimingCoincidence( std::string TFileList )
 {
     TFileCollection* fc = new TFileCollection( "RootFileList", "", TFileList.c_str() );
     return TimingCoincidence( fc );
+}
+
+int TimingCoincidence2File( std::string TFileList, std::string OutputFile )
+{
+    TFile* outfile = new TFile( OutputFile.c_str() , "recreate");
+    TList* outlist = TimingCoincidence( TFileList );
+    printf("Writing to file %s\n", OutputFile.c_str());
+    outlist->Write();
+    printf("Closing file...\n");
+    outfile->Close();
+    return 0;
 }
 
 /*
