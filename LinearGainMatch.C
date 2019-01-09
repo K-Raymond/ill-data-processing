@@ -8,8 +8,8 @@ void LinearGainMatch( TH2* mat_en, double peak1 = 344.28, double width1 = 20,
     //double_t gCalPeaks[2][2] = { {344.28, 20}, {1408.0, 20} };
     double_t MeasuredPeaks[2];
     
-    gSystem->Load("./libdetCal.so");
-    detCal* pChannel = new detCal(fCal);
+    gSystem->Load("./libTXPConfig.so");
+    TXPConfig* pChannel = new TXPConfig(fCal);
     
     vector<double_t> newCal0;
     vector<double_t> newCal1;

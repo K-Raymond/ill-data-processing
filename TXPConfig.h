@@ -17,15 +17,15 @@ enum CalType {
 };
 
 // Class to load in the experimental configuration
-class detCal{
+class TXPConfig{
     // Initialize from a XPConfig
     public:
 
         /* Constructors and Initalizors */
-        detCal();
+        TXPConfig();
         // Load experimenal configuration
         // XPConfig should be the path to XPConfig.txt
-        detCal(std::string XPConfig);
+        TXPConfig(std::string XPConfig);
         int loadCal(std::string XPConfig);
         void exportCal(std::string XPConfig);
 

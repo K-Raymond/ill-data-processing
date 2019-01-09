@@ -1,14 +1,14 @@
-#include "./detCal.h"
+#include "./TXPConfig.h"
 
-detCal::detCal(std::string XPConfig)
+TXPConfig::TXPConfig(std::string XPConfig)
 {
     loadCal(XPConfig);
 }
 
 // Default constructor, let C++ automatically handle this
-detCal::detCal() {}
+TXPConfig::TXPConfig() {}
 
-int detCal::loadCal(std::string XPConfig)
+int TXPConfig::loadCal(std::string XPConfig)
 {
     std::ifstream XPfile(XPConfig);
     if( !XPfile.is_open() )
@@ -58,7 +58,7 @@ int detCal::loadCal(std::string XPConfig)
 
 // Export current experimental config in the same way as
 // XPConfig would be.
-void detCal::exportCal(std::string XPConfig)
+void TXPConfig::exportCal(std::string XPConfig)
 {
     std::ofstream XPOut;
     XPOut.open( XPConfig );
@@ -88,7 +88,7 @@ void detCal::exportCal(std::string XPConfig)
 }
 
 // Convert charge Q to an energy value
-double_t detCal::GetEnergy(int32_t &Q, short &nDet, CalType Interpol)
+double_t TXPConfig::GetEnergy(int32_t &Q, short &nDet, CalType Interpol)
 {
     //double_t E = (double_t)Q + (double_t)rand()/( (double_t)RAND_MAX + 1.0);
     double_t E = (double_t)Q + gRandom->Uniform();
@@ -107,17 +107,17 @@ double_t detCal::GetEnergy(int32_t &Q, short &nDet, CalType Interpol)
     }
 }
 
-double_t detCal::GetCal( int nCoeff, int nDet )
+double_t TXPConfig::GetCal( int nCoeff, int nDet )
 {
     switch( nCoeff ) {
         case 0 : return fCal0Vec[nDet];
         case 1 : return fCal1Vec[nDet];
     }
-    printf("detCal_ERROR: no coefficent for %d\n", nCoeff);
+    printf("TXPConfig_ERROR: no coefficent for %d\n", nCoeff);
     return 0.0;
 }
 
-void detCal::SetCal( int nCoeff, int nDet, double_t Coeff )
+void TXPConfig::SetCal( int nCoeff, int nDet, double_t Coeff )
 {
     switch( nCoeff ) {
         case 0 : fCal0Vec[nDet] = Coeff;
@@ -126,15 +126,15 @@ void detCal::SetCal( int nCoeff, int nDet, double_t Coeff )
                  return;
     }
 
-    printf("detCal_ERROR: no coefficent for %d\n", nCoeff);
+    printf("TXPConfig_ERROR: no coefficent for %d\n", nCoeff);
     return;
 }
 
-bool detCal::isVito(int nDet)
+bool TXPConfig::isVito(int nDet)
 {
     if( fDetTypeVec.size() == 0 )
     {
-        printf("detCal ERROR: No vito/detc information for channel %d\n", nDet);
+        printf("TXPConfig ERROR: No vito/detc information for channel %d\n", nDet);
         return EXIT_FAILURE;
     }
     
@@ -149,12 +149,12 @@ bool detCal::isVito(int nDet)
         return true; // BGO Shield
 }
 
-void detCal::stateVitoDet( int nDet, bool state )
+void TXPConfig::stateVitoDet( int nDet, bool state )
 {
     fvitoVec[nDet] = state;
 }
 
-int detCal::NChan()
+int TXPConfig::NChan()
 {
     return fCal0Vec.size();
 }

@@ -4,8 +4,8 @@
 
 TH1D* ConstructSumCoincidence( TFileCollection* fc )
 {
-    gSystem->Load("./libdetCal.so");
-    detCal* Channel = new detCal("./XPConfig.txt");
+    gSystem->Load("./libTXPConfig.so");
+    TXPConfig* Channel = new TXPConfig("./XPConfig.txt");
 
     // TH1D name( "name", "title", <nbins>, <xmin>, <xmax>
     TH1D* sum_coinc = new TH1D("sum_coinc", "Sum-Coincidence Spectrum", 4000, 0, 4000);

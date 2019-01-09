@@ -13,7 +13,7 @@
 #include "TThread.h"
 #include "TFile.h"
 
-#include "./detCal.h"
+#include "./TXPConfig.h"
 #include "./progressThread.h"
 
 // Global Variables for this file
@@ -60,7 +60,7 @@ static bool isTimePrompt( int16_t &Time1, int16_t &Time2 )
 static TList* TimingCoincidence( TFileCollection* fc )
 {
     // Load Experimental Config
-    detCal* Channel = new detCal("./XPConfig.txt");
+    TXPConfig* Channel = new TXPConfig("./XPConfig.txt");
 
     // Start progress bar
     printf("\rProgress %.2f%%, %.1f of %.1f", 
@@ -190,7 +190,7 @@ static TList* TimingCoincidence( TFileCollection* fc )
 
 TH2D* ConstructGG( TFileCollection* fc )
 {
-    detCal* Channel = new detCal("./XPConfig.txt");
+    TXPConfig* Channel = new TXPConfig("./XPConfig.txt");
 
     printf("Progress %.2f%%, %lld of %lld", 
             100*PartialEntries/(double)TotalEntries,

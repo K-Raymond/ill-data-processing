@@ -2,14 +2,14 @@
 #include "TSelector.h"
 #include "TTreeReader.h"
 #include "TTreeReaderValue.h"
-#include "./detCal.h"
+#include "./TXPConfig.h"
 
 class EngMatSelector : public TSelector
 {
     public:
 
         TH2D* fMatEn;
-        detCal* fCal;
+        TXPConfig* fCal;
 
         TTreeReader fReader;
         TTreeReaderValue<int> fenergy;
@@ -33,7 +33,7 @@ class EngMatSelector : public TSelector
 void TutorialSelector::Init(TTree *tree)
 {
     fReader.SetTree(Tree);
-    fCal = new detCal("./XPConfig.txt"); // Set the calibration
+    fCal = new TXPConfig("./XPConfig.txt"); // Set the calibration
 }
 
 void TutorialSelector::SlaveBegin(TTree *tree)

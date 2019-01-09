@@ -12,12 +12,12 @@
 #include "THashList.h"
 #include "TThread.h"
 
-#include "./detCal.h"
+#include "./TXPConfig.h"
 
 TH2* ConstructEng( TFileCollection* fc, std::string fCal)
 {
-    //gSystem->Load("./libdetCal.so");
-    detCal* Channel = new detCal(fCal);
+    //gSystem->Load("./libTXPConfig.so");
+    TXPConfig* Channel = new TXPConfig(fCal);
 
     TH2D* engMat = new TH2D("qMat", "Charge Matrix",
             98, 0, 98,
