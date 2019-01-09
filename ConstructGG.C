@@ -60,7 +60,7 @@ static bool isTimePrompt( int16_t &Time1, int16_t &Time2 )
 static TList* TimingCoincidence( TFileCollection* fc )
 {
     // Load Experimental Config
-    TXPConfig* Channel = new TXPConfig("./XPConfig.txt");
+    TXPConfig* XPConfig = new TXPConfig("./XPConfig.txt");
 
     // Start progress bar
     printf("\rProgress %.2f%%, %.1f of %.1f", 
@@ -114,10 +114,10 @@ static TList* TimingCoincidence( TFileCollection* fc )
     outList->Add(ggTimeDiffHPGe);
 
     // Plot the histogram that shows the size of the event packets
-    TH1D* hEvntPacket = new TH1D("hEvntPacket",
+    TH1D* hEvntPacketSize = new TH1D("hEvntPacketSize",
             "#gamma-#gamma multiplicty of events",
             200, 0, 200);
-    outList->Add(multi);
+    outList->Add(hEvntPacketSize);
     int eventMulti;
 
     //  Parse through TTree
@@ -125,7 +125,7 @@ static TList* TimingCoincidence( TFileCollection* fc )
     {
         eventMulti = *multiplicity;
 
-        hEvntPacket->Fill(eventMulti);
+        hEvntPacketSize->Fill(eventMulti);
 
         // Avoid race conditions with mutexs (necessary? TODO)
         //while(TThread::TryLock()) {}
@@ -147,24 +147,24 @@ static TList* TimingCoincidence( TFileCollection* fc )
                 if( energy[i] > 32760 || energy[j] > 32760 )
                     continue;
 
-                if( Channel->isBGO( adc[i] ) || Channel->isBGO( adc[j] ) )
+                if( XPConfig->isBGO( adc[i] ) || XPConfig->isBGO( adc[j] ) )
                     ggTimeDiffBGO->Fill( abs(timeStamp[i] - timeStamp[j] ) );
                 else
                     ggTimeDiffHPGe->Fill( abs(timeStamp[i] - timeStamp[j] ) );
 
                 // Vito detectors
-                if( Channel->isVito( adc[i] ) || Channel->isVito( adc[j] ) )
+                if( XPConfig->isVito( adc[i] ) || XPConfig->isVito( adc[j] ) )
                     continue;
                 
                 ggTimeDiff->Fill( abs(timeStamp[i] - timeStamp[j]) );
 
                 if ( isTimeRandom( timeStamp[i], timeStamp[j] ) )
-                    ggMatRand->Fill( Channel->GetEnergy( energy[i], adc[i] ),
-                            Channel->GetEnergy( energy[j], adc[j] ));
+                    ggMatRand->Fill( XPConfig->GetEnergy( energy[i], adc[i] ),
+                            XPConfig->GetEnergy( energy[j], adc[j] ));
                 if ( isTimePrompt( timeStamp[i], timeStamp[j] ) )
                 {
-                    ggMatPrompt->Fill( Channel->GetEnergy( energy[i], adc[i] ),
-                            Channel->GetEnergy( energy[j], adc[j] ));
+                    ggMatPrompt->Fill( XPConfig->GetEnergy( energy[i], adc[i] ),
+                            XPConfig->GetEnergy( energy[j], adc[j] ));
                 }
 
             }
@@ -183,14 +183,14 @@ static TList* TimingCoincidence( TFileCollection* fc )
     ggBS->Add(ggMatRand, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
 
     // Cleanup
-    delete Channel;
+    delete XPConfig;
     delete pChain;
     return outList;
 }
 
 TH2D* ConstructGG( TFileCollection* fc )
 {
-    TXPConfig* Channel = new TXPConfig("./XPConfig.txt");
+    TXPConfig* XPConfig = new TXPConfig("./XPConfig.txt");
 
     printf("Progress %.2f%%, %lld of %lld", 
             100*PartialEntries/(double)TotalEntries,
@@ -233,7 +233,7 @@ TH2D* ConstructGG( TFileCollection* fc )
             continue;        
         for( int i = 0; i < eventMulti; i++ )
         {
-           if( Channel->isVito( adc[i] ) )
+           if( XPConfig->isVito( adc[i] ) )
                vito = true;
         }
         for( int i = 0; i < eventMulti; i++ )
@@ -248,8 +248,8 @@ TH2D* ConstructGG( TFileCollection* fc )
                 for( int j = i+1; j < eventMulti; j++ )
                     // if result is weird, vito it
                     // otherwise populate ggMat
-                    ggMat->Fill( Channel->GetEnergy( energy[i], adc[i] ),
-                            Channel->GetEnergy( energy[j], adc[j] ));
+                    ggMat->Fill( XPConfig->GetEnergy( energy[i], adc[i] ),
+                            XPConfig->GetEnergy( energy[j], adc[j] ));
 
     }
 
@@ -258,7 +258,7 @@ TH2D* ConstructGG( TFileCollection* fc )
             100*PartialEntries/(double)TotalEntries,
             PartialEntries,
             TotalEntries);
-    delete Channel;
+    delete XPConfig;
     delete pChain;
     return ggMat;
 }

@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include "TRandom.h"
+#include "TObject.h"
 
 // Enumerator for choosing which type of energy calibration
 enum CalType {
@@ -16,8 +17,15 @@ enum CalType {
     QUADRADIC
 };
 
+// Structure for event packets
+struct AddbackEvntPacket {
+    double_t* Energy; // Calibrated addback energy
+    int16_t* timeStamp; // timestamp of the first event
+    int multiplicity; // number of events in packet
+};
+
 // Class to load in the experimental configuration
-class TXPConfig{
+class TXPConfig : public TObject {
     // Initialize from a XPConfig
     public:
 
@@ -28,6 +36,11 @@ class TXPConfig{
         TXPConfig(std::string XPConfig);
         int loadCal(std::string XPConfig);
         void exportCal(std::string XPConfig);
+        
+        /* Geometry Functions */
+        //int loadGeometry(std::string XPGeometry);
+        //void exportGeometry(std::string XPGeometry);
+        //double_t GetAngle( int index1, int index2 );
 
         /* Energy calibration functions */
         double_t GetEnergy(int32_t &Q, short &nDet, CalType Interpol = LINEAR );
