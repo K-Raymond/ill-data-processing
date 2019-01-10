@@ -42,10 +42,10 @@ static void* UpdateProgress(void *ptr)
 
 
 static int16_t ggBTLow = 500; // *10ns
-static int16_t ggBTHigh = 2000;
+static int16_t ggBTHigh = 2500;
 
 static int16_t ggTLow = 0; // *10ns
-static int16_t ggTHigh = 50;
+static int16_t ggTHigh = 150;
 
 static bool isTimeRandom( int16_t &Time1, int16_t &Time2 )
 {
@@ -70,6 +70,7 @@ static TList* TimingCoincidence( TFileCollection* fc )
     TThread *t1 = new TThread("t1", UpdateProgress, NULL);
     t1->Run();
 
+    printf("Loading TTree's into TChain...\n");
     // Load Lst2RootTree's into a TChain
     TChain* pChain = new TChain("Lst2RootTree");
     pChain->AddFileInfoList( fc->GetList() );
@@ -120,6 +121,7 @@ static TList* TimingCoincidence( TFileCollection* fc )
     outList->Add(hEvntPacketSize);
     int eventMulti;
 
+    printf("Starting Analysis...\n");
     //  Parse through TTree
     while ( TreeR.Next() )
     {

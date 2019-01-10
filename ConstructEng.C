@@ -11,17 +11,40 @@
 #include "TChain.h"
 #include "THashList.h"
 #include "TThread.h"
+#include "TFile.h"
 
 #include "./TXPConfig.h"
 
-TH2* ConstructEng( TFileCollection* fc, std::string fCal)
+TList* ConstructEng( TFileCollection* fc, std::string fCal)
 {
     //gSystem->Load("./libTXPConfig.so");
-    TXPConfig* Channel = new TXPConfig(fCal);
+    TXPConfig* XPConfig = new TXPConfig(fCal);
 
-    TH2D* engMat = new TH2D("qMat", "Charge Matrix",
+    //ROOT::EnableImplicitMT(4);
+
+    TList* outlist = new TList();
+    TH2D* engMat = new TH2D("engMat", "Energy Matrix",
             98, 0, 98,
             32767, 0, 16383);
+    outlist->Add(engMat);
+    TH2D* engMatVito = new TH2D("engMatVito", "Energy Matrix with vito",
+            98, 0, 98,
+            32767, 0, 16383);
+    outlist->Add(engMatVito);
+
+    TH1D* hSingles = new TH1D("hSingles", "#gamma HPGe singles",
+            32767, 0, 16383);
+    outlist->Add(hSingles);
+
+    // ADC hit patterns
+    TH2D* adcMat = new TH2D("adcMat", "Hit Pattern",
+            98, 0, 98,
+            98, 0, 98);
+    outlist->Add(adcMat);
+    TH2D* adcMatBGO = new TH2D("adcMatBGO", "Hit Pattern BGO",
+            98, 0, 98,
+            98, 0, 98);
+    outlist->Add(adcMatBGO);
 
     // Load Lst2RootTree's into chain
     TChain* pChain = new TChain("Lst2RootTree");
@@ -48,30 +71,65 @@ TH2* ConstructEng( TFileCollection* fc, std::string fCal)
             charge = energy[i];
             address = adc[i];
 
-            if ( charge < 2 ) continue;
-            if ( charge > 32760 ) continue;
+            if ( charge < 2 ) continue; // skip underfill
+            if ( charge > 32760 ) continue; // skip overflow
+
+            if ( !XPConfig->isVito(address) )
+                hSingles->Fill( XPConfig->GetEnergy( charge, address ) );
 
             engMat->Fill(
                     address,
-                    Channel->GetEnergy( charge, address ) );
+                    XPConfig->GetEnergy( charge, address ) );
+            if( XPConfig->isVito( address ) )
+                engMatVito->Fill(
+                    address,
+                    XPConfig->GetEnergy( charge, address ) );
         }
+
+        // pattern generating
+        for( int i = 0; i < multi; i++ )
+            for( int j = i; j < multi; j++ )
+            {
+                if( energy[i] > 32760 || energy[j] > 32760 )
+                    continue; // skip overflow
+                if( energy[i] < 2 || energy[j] < 2 )
+                    continue; // skip underflow
+
+                adcMat->Fill(adc[i], adc[j]);
+
+                // show which detectors are coincident with BGO's
+                if( XPConfig->isBGO( adc[i] ) || XPConfig->isBGO( adc[j] ) )
+                        adcMatBGO->Fill(adc[i], adc[j]);
+            }
     }
 
-    delete Channel;
+    delete XPConfig;
     delete pChain;
-    return engMat;
+    return outlist;
 }
 
-TH2* ConstructEng( std::string TFileList , std::string fCal)
+TList* ConstructEng( std::string TFileList , std::string fCal)
 {
     TFileCollection* fc = new TFileCollection( "RootFileList", "", TFileList.c_str() );
     return ConstructEng( fc, fCal );
 }
 
 // Default
-TH2* ConstructEng( std::string TFileList )
+TList* ConstructEng( std::string TFileList )
 {
     TFileCollection* fc = new TFileCollection( "RootFileList",
             "", TFileList.c_str() );
     return ConstructEng( fc, "./XPConfig.txt");
+}
+
+int ConstructEng2File( std::string FileList, std::string OutputFile )
+{
+    TFile* outfile = new TFile( OutputFile.c_str(), "UPDATE" );
+    TList* outlist = ConstructEng( FileList );
+    printf("Writing to file %s\n", OutputFile.c_str() );
+    outlist->Write();
+    printf("Closing file...");
+    outfile->Close();
+    printf("Done!\n");
+    return 0;
 }
