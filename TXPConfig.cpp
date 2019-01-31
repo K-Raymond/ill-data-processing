@@ -60,7 +60,7 @@ int TXPConfig::loadCal(std::string XPConfig)
 
 // Export current experimental config in the same way as
 // XPConfig would be.
-void TXPConfig::exportCal(std::string XPConfig)
+oid TXPConfig::exportCal(std::string XPConfig)
 {
     if( !fhasEngCalibration )
     {
@@ -100,7 +100,7 @@ int TXPConfig::loadGeometry(std::string XPGeometry)
     std::ifstream XPfile(XPGeometry);
     if( !XPfile.is_open() )
     {
-        printf("Failed to open XPConfig at %s\n", XPConfig.c_str() );
+        printf("Failed to open XPConfig at %s\n", XPGeometry.c_str() );
         return EXIT_FAILURE;
     }
 
@@ -190,6 +190,76 @@ int TXPConfig::loadGeometry(std::string XPGeometry)
     return EXIT_SUCCESS;
 }
 
+// Export current experimental config in the same way as
+// XPConfig would be.
+void TXPConfig::exportGeometry(std::string XPGeometry)
+{
+    if( !fhasGeometry )
+    {
+        printf("TXPConfig: No geometry calibration!");
+        return;
+    }
+
+    std::ofstream XPOut;
+    XPOut.open( XPConfig );
+    if( !XPOut )
+    {
+        printf("exportGeometry: Could not open %s\n", XPConfig.c_str() );
+        return;
+    }
+
+    // Standard header
+    XPOut << "# index clov cryst" << std::endl;
+
+    // For the XPConfig, cal0*x + cal1 rather than the standard polynomial
+    // notation.
+    for( int i = 0; i < fCal0Vec.size(); i++ )
+    {
+        XPOut << i << " ";
+        XPOut << fIndex2Clover[i] << " ";
+        XPOut << fIndex2Cryst[i] << " ";
+        XPOut << std::endl;
+    }
+
+    XPOut.close();
+    return;
+}
+
+int TXPConfig::getDetNum( int index )
+{
+    if( fhasGeometry == false )
+    {
+        printf("getDetNum: No Geometry information loaded\n");
+        return 0.0;
+    }
+
+    return fIndex2Clover[index]
+}
+
+int TXPConfig::getCrystNum( int index )
+{
+    if( fhasGeometry == false )
+    {
+        printf("getCrystNum: No Geometry information loaded\n");
+        return 0.0;
+    }
+
+    return fIndex2Cryst[index]
+}
+
+double_t TXPConfig::GetAngle( int index1, int index2 ) {
+    if( fhasGeometry == false )
+    {
+        printf("GetAngle: No Geometry information loaded\n");
+        return 0.0;
+    }
+
+    int det1 = getDetNum(index1);
+    int det2 = getDetNum(index2);
+
+    return fDetPositions[det1].Angle(fDetPositions[det2]);
+}
+
 // Convert charge Q to an energy value
 double_t TXPConfig::GetEnergy(int32_t &Q, short &index, CalType Interpol)
 {
@@ -260,4 +330,63 @@ void TXPConfig::setVitoDet( int index, bool state )
 int TXPConfig::NChan()
 {
     return fCal0Vec.size();
+}
+
+
+/* == Processing functions == */
+EvntPacket::Singles* TXPConfig::Leaf2Singles( int32_t* Q, int16_t* adc,
+        int16_t* timeStamp, int multiplicity)
+{
+    EvntPacket::Singles* OutPacket = new EvntPacket::Singles();
+    OutPacket->multiplicty = multiplicty;
+
+    for( int i =0; i < muliplicity; i++ )
+    {
+        OutPacket->Energy.push_back( GetEnergy( Q[i], adc[i] ) );
+        OutPacket->index.push_back( adc[i] );
+        if( fhasGeometry == true )
+        {
+            OutPacket->detectorNum.push_back( getDetNum( adc[i] ) );
+            OutPacket->crystNum.push_back( getCrystNum( adc[i] ) );
+        }
+        OutPacket->timeStamp.push_back( timeStamp[i] );
+    }
+
+    return OutPacket;
+}
+
+EvntPacket::Addback* TXPConfig::Leaf2Addback( int32_t* Q, int16_t* adc,
+        int16_t* timeStamp, int multiplicity)
+{
+    // Events in an event packet are grouped together if they are from the
+    // same detector and the time difference between them is less than dT
+    int16_t dT = 100;       // 10ns, coincidence dT
+    EventPacket::Addback* OutPacket = new EventPacket::Addback();
+    
+    bool inPacket = false; // Set true if in packet
+    for( int i = 0; i < multiplicty; i++ )
+    {
+        inPacket = false;
+        for( int j = 0; j < OutPacket.multiplicity; j++ )
+        {
+            // Loop over unprocess events and compare with the already
+            // processed list for events with the same clover number
+            // and if they are incoincidence, group them together
+            if(getDetNum( adc[i] ) ==  OutPacket.detectorNum[j])
+                if( abs(timeStamp[i] - OutPacket.timeStamp[j] ) < dT )
+                {
+                    OutPacket.Energy[j] += GetEnergy( Q[i], adc[i] );
+                    inPacket = true;
+                }
+        }
+        if( inPacket = false )
+        {
+            OutPacket->Energy.push_back( GetEnergy( Q[i], adc[i] ) );
+            OutPacket->index.push_back( adc[i] );
+            OutPacket->detectorNum.push_back( getDetNum( adc[i] ) );
+            OutPacket->timeStamp.push_back( timeStamp[i] );
+        }
+    }
+
+    return OutPacket;
 }

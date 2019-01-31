@@ -24,7 +24,9 @@ namespace EvntPacket {
     // a calibrated energy from XPConfig.
     struct Singles {
         std::vector<double_t> Energy;
-        std::vector<int16_t> adc;
+        std::vector<int16_t> index;
+        std::vector<int> detectorNum;
+        std::vector<int> crystNum;
         std::vector<int16_t> timeStamp;
         int multiplicity; // number of events in packet
     };
@@ -35,7 +37,7 @@ namespace EvntPacket {
     // events.
     struct Addback {
         std::vector<double_t> Energy;
-        std::vector<int16_t> detector;
+        std::vector<int16_t> detectorNum;
         std::vector<int16_t> timeStamp; // timestamp of the first event
         int multiplicity;
     };
@@ -60,9 +62,9 @@ class TXPConfig : public TObject {
         /* == Geometry Functions  == */
         int loadGeometry(std::string XPGeometry);
         //void exportGeometry(std::string XPGeometry);
-        //double_t GetAngle( int index1, int index2 );
-        //int getDetNum( int index )
-        //int getCrystNum( int index )
+        double_t GetAngle( int index1, int index2 );
+        int getDetNum( int index )
+        int getCrystNum( int index )
 
         /* == Energy calibration functions == */
         double_t GetEnergy(int32_t &Q, short &index, CalType Interpol = LINEAR );
@@ -83,11 +85,11 @@ class TXPConfig : public TObject {
 
         /* == Processing functions == */
         // The returned objects must be deleted
-        /*
         EvntPacket::Singles* Leaf2Singles( int32_t* Q, int16_t* adc, 
                 int16_t* timeStamp, int multiplicity);
         EvntPacket::Addback* Leaf2Addback( int32_t* Q, int16_t* adc,
                 int16_t* timeStamp, int multiplicity);
+        /*
         EventPacket::Addback* Singles2Addback( EvntPacket::Singles* Singles );
         */
 
