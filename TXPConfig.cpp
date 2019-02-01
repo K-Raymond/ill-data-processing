@@ -8,6 +8,11 @@ TXPConfig::TXPConfig(std::string XPConfig)
 
 // Default constructor, let C++ automatically handle this
 TXPConfig::TXPConfig() {}
+TXPConfig::TXPConfig(std::string XPConfig, std::string XPGeometry)
+{
+    loadCal( XPConfig );
+    loadGeometry( XPGeometry );
+}
 
 int TXPConfig::loadCal(std::string XPConfig)
 {
@@ -60,7 +65,7 @@ int TXPConfig::loadCal(std::string XPConfig)
 
 // Export current experimental config in the same way as
 // XPConfig would be.
-oid TXPConfig::exportCal(std::string XPConfig)
+void TXPConfig::exportCal(std::string XPConfig)
 {
     if( !fhasEngCalibration )
     {
@@ -134,53 +139,53 @@ int TXPConfig::loadGeometry(std::string XPGeometry)
     // Create geometry vectors now. Angles are measured from each x,y,z axis.
     // Vectors point to positions on the unit sphere.
     // Corona Ring (Detectors 0 -> 7)
-    fDetPositions[0] = new TVector3( 0.0, 0.0, 1 );
-    fDetPositions[1] = new TVector3( 0.0,
+    fDetPositions[0] = TVector3( 0.0, 0.0, 1 );
+    fDetPositions[1] = TVector3( 0.0,
             TMath::Sin(TMath::DegToRad() * 45.0 ),
             TMath::Cos(TMath::DegToRad() * 45.0 ) );
-    fDetPositions[2] = new TVector3( 0.0, 1, 0.0 );
-    fDetPositions[3] = new TVector3( 0.0,
+    fDetPositions[2] = TVector3( 0.0, 1, 0.0 );
+    fDetPositions[3] = TVector3( 0.0,
             TMath::Sin(TMath::DegToRad() * 135.0),
             TMath::Cos(TMath::DegToRad() * 135.0) );
-    fDetPositions[4] = new TVector3( 0.0, 0.0, -1 );
-    fDetPositions[5] = new TVector3( 0.0,
+    fDetPositions[4] = TVector3( 0.0, 0.0, -1 );
+    fDetPositions[5] = TVector3( 0.0,
             TMath::Sin(TMath::DegToRad() * 225.0),
             TMath::Cos(TMath::DegToRad() * 225.0) );
-    fDetPositions[6] = new TVector3( 0.0, -1, 0.0 );
-    fDetPositions[7] = new Tvector3( 0.0,
+    fDetPositions[6] = TVector3( 0.0, -1, 0.0 );
+    fDetPositions[7] = TVector3( 0.0,
             TMath::Sin(TMath::DegToRad() * 315.0),
             TMath::Cos(TMath::DegToRad() * 315.0) );
-    // Rear Lampshade (Detectors 8 -> 11)
-    fDetPositions[8] = new TVector3(
+    // Downstream Lampshade (Detectors 8 -> 11)
+    fDetPositions[8] = TVector3(
             TMath::Cos(TMath::DegToRad() * 45.0 ),
             0.0,
             TMath::Cos(TMath::DegToRad() * 45.0) );
-    fDetPositions[9] = new TVector3(
+    fDetPositions[9] = TVector3(
             TMath::Cos(TMath::DegToRad() * 45.0 ),
             TMath::Cos(TMath::DegToRad() * 45.0),
             0.0 );
-    fDetPositions[10] = new TVector3(
+    fDetPositions[10] = TVector3(
             TMath::Cos(TMath::DegToRad() * 45.0 ),
             0.0,
             TMath::Cos(TMath::DegToRad() * 135.0) );
-    fDetPositions[11] = new TVector3(
+    fDetPositions[11] = TVector3(
             TMath::Cos(TMath::DegToRad() * 45.0 ),
             TMath::Cos(TMath::DegToRad() * 135.0),
             0.0 );
-    // Front Lampshade (Detectors 12 -> 15 )
-    fDetPositions[12] = new TVector3(
+    // Upstream Lampshade (Detectors 12 -> 15 )
+    fDetPositions[12] = TVector3(
             TMath::Cos(TMath::DegToRad() * 135.0),
             0.0,
             TMath::Cos(TMath::DegToRad() * 45.0) );
-    fDetPositions[13] = new TVector3(
+    fDetPositions[13] = TVector3(
             TMath::Cos(TMath::DegToRad() * 135.0 ),
             TMath::Cos(TMath::DegToRad() * 315.0),
             0.0 );
-    fDetPositions[14] = new TVector3(
+    fDetPositions[14] = TVector3(
             TMath::Cos(TMath::DegToRad() * 135.0),
             0.0,
             TMath::Cos(TMath::DegToRad() * 135.0) );
-    fDetPositions[15] = new TVector3(
+    fDetPositions[15] = TVector3(
             TMath::Cos(TMath::DegToRad() * 135.0 ),
             TMath::Cos(TMath::DegToRad() * 225.0),
             0.0 );
@@ -201,10 +206,10 @@ void TXPConfig::exportGeometry(std::string XPGeometry)
     }
 
     std::ofstream XPOut;
-    XPOut.open( XPConfig );
+    XPOut.open( XPGeometry );
     if( !XPOut )
     {
-        printf("exportGeometry: Could not open %s\n", XPConfig.c_str() );
+        printf("exportGeometry: Could not open %s\n", XPGeometry.c_str() );
         return;
     }
 
@@ -233,7 +238,7 @@ int TXPConfig::getDetNum( int index )
         return 0.0;
     }
 
-    return fIndex2Clover[index]
+    return fIndex2Clover[index];
 }
 
 int TXPConfig::getCrystNum( int index )
@@ -244,10 +249,10 @@ int TXPConfig::getCrystNum( int index )
         return 0.0;
     }
 
-    return fIndex2Cryst[index]
+    return fIndex2Cryst[index];
 }
 
-double_t TXPConfig::GetAngle( int index1, int index2 ) {
+double_t TXPConfig::GetAngleIndex( int index1, int index2 ) {
     if( fhasGeometry == false )
     {
         printf("GetAngle: No Geometry information loaded\n");
@@ -258,6 +263,16 @@ double_t TXPConfig::GetAngle( int index1, int index2 ) {
     int det2 = getDetNum(index2);
 
     return fDetPositions[det1].Angle(fDetPositions[det2]);
+}
+
+double_t TXPConfig::GetAngleDetec( int nDet1, int nDet2 ) {
+    if( fhasGeometry == false )
+    {
+        printf("GetAngle: No Geometry information loaded\n");
+        return 0.0;
+    }
+
+    return fDetPositions[nDet1].Angle(fDetPositions[nDet2]);
 }
 
 // Convert charge Q to an energy value
@@ -334,14 +349,22 @@ int TXPConfig::NChan()
 
 
 /* == Processing functions == */
-EvntPacket::Singles* TXPConfig::Leaf2Singles( int32_t* Q, int16_t* adc,
-        int16_t* timeStamp, int multiplicity)
+EvntPacket::Singles* TXPConfig::Leaf2Singles( TTreeReaderArray<int32_t> &Q,
+        TTreeReaderArray<int16_t> &adc, TTreeReaderArray<int16_t> &timeStamp,
+        int multiplicity)
 {
     EvntPacket::Singles* OutPacket = new EvntPacket::Singles();
-    OutPacket->multiplicty = multiplicty;
+    OutPacket->multiplicity = multiplicity;
 
-    for( int i =0; i < muliplicity; i++ )
+    for( int i =0; i < multiplicity; i++ )
     {
+        if( Q[i] > 32760 ) // Skip overflow
+            continue;
+        if( Q[i] < 2 ) // skip underflow
+            continue;
+        if( isVito( adc[i] ) ) // skip vito
+            continue;
+
         OutPacket->Energy.push_back( GetEnergy( Q[i], adc[i] ) );
         OutPacket->index.push_back( adc[i] );
         if( fhasGeometry == true )
@@ -355,36 +378,49 @@ EvntPacket::Singles* TXPConfig::Leaf2Singles( int32_t* Q, int16_t* adc,
     return OutPacket;
 }
 
-EvntPacket::Addback* TXPConfig::Leaf2Addback( int32_t* Q, int16_t* adc,
-        int16_t* timeStamp, int multiplicity)
+EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
+        TTreeReaderArray<int16_t> &adc, TTreeReaderArray<int16_t> &timeStamp,
+        int multiplicity)
 {
     // Events in an event packet are grouped together if they are from the
     // same detector and the time difference between them is less than dT
     int16_t dT = 100;       // 10ns, coincidence dT
-    EventPacket::Addback* OutPacket = new EventPacket::Addback();
+    EvntPacket::Addback* OutPacket = new EvntPacket::Addback();
     
-    bool inPacket = false; // Set true if in packet
-    for( int i = 0; i < multiplicty; i++ )
+    bool inPacket = false; // Set true if partial event is already in packet
+    for( int i = 0; i < multiplicity; i++ )
     {
         inPacket = false;
-        for( int j = 0; j < OutPacket.multiplicity; j++ )
+        
+        if( Q[i] > 32760 ) // Skip overflow
+            continue;
+        if( Q[i] < 2 ) // skip underflow
+            continue;
+        if( isVito( adc[i] ) ) // skip vito
+            continue;
+
+        for( int j = 0; j < OutPacket->multiplicity; j++ )
         {
             // Loop over unprocess events and compare with the already
             // processed list for events with the same clover number
             // and if they are incoincidence, group them together
-            if(getDetNum( adc[i] ) ==  OutPacket.detectorNum[j])
-                if( abs(timeStamp[i] - OutPacket.timeStamp[j] ) < dT )
+            if( getDetNum( adc[i] ) ==  OutPacket->detectorNum[j] )
+                if( abs(timeStamp[i] - OutPacket->timeStamp[j] ) < dT )
                 {
-                    OutPacket.Energy[j] += GetEnergy( Q[i], adc[i] );
+                    OutPacket->Energy[j] += GetEnergy( Q[i], adc[i] );
+                    OutPacket->groupedHitsNum[j] += 1;
                     inPacket = true;
                 }
         }
-        if( inPacket = false )
+        if( inPacket == false )
         {
+            if( fIndex2Cryst[adc[i]] == -1 ) // Skip for unknown detectors
+                continue;
             OutPacket->Energy.push_back( GetEnergy( Q[i], adc[i] ) );
-            OutPacket->index.push_back( adc[i] );
             OutPacket->detectorNum.push_back( getDetNum( adc[i] ) );
             OutPacket->timeStamp.push_back( timeStamp[i] );
+            OutPacket->multiplicity++;
+            OutPacket->groupedHitsNum.push_back( 1 ); // first hit
         }
     }
 

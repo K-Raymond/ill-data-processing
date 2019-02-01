@@ -60,7 +60,7 @@ static bool isTimePrompt( int16_t &Time1, int16_t &Time2 )
 static TList* TimingCoincidence( TFileCollection* fc )
 {
     // Load Experimental Config
-    TXPConfig* XPConfig = new TXPConfig("./XPConfig.txt");
+    TXPConfig* XPConfig = new TXPConfig("./XPConfig.txt", "./XPConfigs/XPGeometry.txt" );
 
     // Start progress bar
     printf("\rProgress %.2f%%, %.1f of %.1f", 
@@ -116,11 +116,49 @@ static TList* TimingCoincidence( TFileCollection* fc )
 
     // Plot the histogram that shows the size of the event packets
     TH1D* hEvntPacketSize = new TH1D("hEvntPacketSize",
-            "#gamma-#gamma multiplicty of events",
+            "#gamma-#gamma multiplicity of events",
             200, 0, 200);
+    TH1D* hAddbackEvntPacketSize = new TH1D("hAddbackEvntPacketSize",
+            "Addback #gamma-#gamma multiplicity of events",
+            15, 0, 15);
     outList->Add(hEvntPacketSize);
+    outList->Add(hAddbackEvntPacketSize);
+
+    // Addback matricies
+    TH2D* ggMatPromptAddback = new TH2D("ggMatPromptAddback", "Addback Prompt #gamma-#gamma Coincidence",
+            10000, 0, 10000,
+            10000, 0, 10000);
+    TH2D* ggMatRandAddback = new TH2D("ggMatRandAddback", "Addback Random #gamma-#gamma Coincidence",
+            10000, 0, 10000,
+            10000, 0, 10000);
+    TH2D* ggBSAddback = new TH2D("ggBSAddback", "Addback #gamma-#gamma Coincidence Background Subtracted",
+            10000, 0, 10000,
+            10000, 0, 10000);
+    outList->Add(ggMatPromptAddback);
+    outList->Add(ggMatRandAddback);
+    outList->Add(ggBSAddback);
+
+    // Opposite Addback matricies
+    TH2D* ggMatPromptAddOpp = new TH2D("ggMatPromptAddOpp", "Addback Prompt #gamma-#gamma Coincidence Opposite Detectors",
+            10000, 0, 10000,
+            10000, 0, 10000);
+    TH2D* ggMatRandAddOpp = new TH2D("ggMatRandAddOpp", "Addback Random #gamma-#gamma Coincidence Opposite Detectors",
+            10000, 0, 10000,
+            10000, 0, 10000);
+    TH2D* ggBSAddOpp = new TH2D("ggBSAddOpp", "Addback #gamma-#gamma Coincidence Opposite Detectors Background Subtracted",
+            10000, 0, 10000,
+            10000, 0, 10000);
+    outList->Add(ggMatPromptAddOpp);
+    outList->Add(ggMatRandAddOpp);
+    outList->Add(ggBSAddOpp);
+
+    TH1D* ggTimeDiffAddback = new TH1D("ggTimeDiff", "Addback #gamma-#gamma time difference",
+            511, 0, 4095);
+    outList->Add(ggTimeDiffAddback);
+
     int eventMulti;
 
+    EvntPacket::Addback* AddbackPkt;
     printf("Starting Analysis...\n");
     //  Parse through TTree
     while ( TreeR.Next() )
@@ -171,6 +209,36 @@ static TList* TimingCoincidence( TFileCollection* fc )
 
             }
 
+        AddbackPkt = XPConfig->Leaf2Addback( energy, adc, timeStamp, eventMulti );
+
+        for( int i = 0; i < AddbackPkt->multiplicity; i++ )
+        {
+            for( int j = i+1; j < AddbackPkt->multiplicity; j++)
+            {
+                ggTimeDiffAddback->Fill( abs( 
+                            AddbackPkt->timeStamp[i] - AddbackPkt->timeStamp[j]) );
+
+                if( isTimeRandom( AddbackPkt->timeStamp[i], AddbackPkt->timeStamp[j] ) )
+                {
+                    ggMatRandAddback->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
+
+                    if( XPConfig->GetAngleDetec( AddbackPkt->detectorNum[i],
+                                AddbackPkt->detectorNum[j] ) )
+                        ggMatRandAddOpp->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
+                }
+
+                if( isTimePrompt( AddbackPkt->timeStamp[i], AddbackPkt->timeStamp[j] ) )
+                {
+                    ggMatPromptAddback->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
+
+                    if( XPConfig->GetAngleDetec( AddbackPkt->detectorNum[i],
+                                AddbackPkt->detectorNum[j] ) )
+                        ggMatPromptAddOpp->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
+                }
+            }
+        }
+
+        delete AddbackPkt;
     }
 
     // Stop thread that displays progress and print final progress
@@ -183,6 +251,12 @@ static TList* TimingCoincidence( TFileCollection* fc )
     // Construct background subtracted gg matrix
     ggBS->Add(ggMatPrompt);
     ggBS->Add(ggMatRand, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
+
+    ggBSAddback->Add(ggMatPromptAddback);
+    ggBSAddback->Add(ggMatRandAddback, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
+
+    ggBSAddOpp->Add(ggMatPromptAddOpp);
+    ggBSAddOpp->Add(ggMatRandAddOpp, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
 
     // Cleanup
     delete XPConfig;

@@ -7,7 +7,8 @@
 #include <stdlib.h>
 #include <float.h>
 #include <math.h>
-#include <TVector.h>
+#include <TVector3.h>
+#include <TTreeReaderArray.h>
 
 #include "TRandom.h"
 #include "TObject.h"
@@ -39,6 +40,7 @@ namespace EvntPacket {
         std::vector<double_t> Energy;
         std::vector<int16_t> detectorNum;
         std::vector<int16_t> timeStamp; // timestamp of the first event
+        std::vector<int16_t> groupedHitsNum;
         int multiplicity;
     };
 
@@ -47,6 +49,7 @@ namespace EvntPacket {
 // Class to load in the experimental configuration and process events into
 // event packets
 class TXPConfig : public TObject {
+    ClassDef(TXPConfig, 2);
     // Initialize from a XPConfig
     public:
 
@@ -55,16 +58,17 @@ class TXPConfig : public TObject {
 
         // %% Load experimenal configuration from config files %%
         TXPConfig(std::string XPConfig);
-        //TXPConfig(std::string XPConfig, std::string XPGeometry);
+        TXPConfig(std::string XPConfig, std::string XPGeometry);
         int loadCal(std::string XPConfig);
         void exportCal(std::string XPConfig);
         
         /* == Geometry Functions  == */
         int loadGeometry(std::string XPGeometry);
-        //void exportGeometry(std::string XPGeometry);
-        double_t GetAngle( int index1, int index2 );
-        int getDetNum( int index )
-        int getCrystNum( int index )
+        void exportGeometry(std::string XPGeometry);
+        double_t GetAngleIndex( int index1, int index2 );
+        double_t GetAngleDetec( int nDet1, int nDet2 );
+        int getDetNum( int index );
+        int getCrystNum( int index );
 
         /* == Energy calibration functions == */
         double_t GetEnergy(int32_t &Q, short &index, CalType Interpol = LINEAR );
@@ -85,10 +89,12 @@ class TXPConfig : public TObject {
 
         /* == Processing functions == */
         // The returned objects must be deleted
-        EvntPacket::Singles* Leaf2Singles( int32_t* Q, int16_t* adc, 
-                int16_t* timeStamp, int multiplicity);
-        EvntPacket::Addback* Leaf2Addback( int32_t* Q, int16_t* adc,
-                int16_t* timeStamp, int multiplicity);
+        EvntPacket::Singles* Leaf2Singles( TTreeReaderArray<int32_t> &Q,
+                TTreeReaderArray<int16_t> &adc, TTreeReaderArray<int16_t> &timeStamp,
+                int multiplicity);
+        EvntPacket::Addback* Leaf2Addback( TTreeReaderArray<int32_t> &Q,
+                TTreeReaderArray<int16_t> &adc, TTreeReaderArray<int16_t> &timeStamp,
+                int multiplicity);
         /*
         EventPacket::Addback* Singles2Addback( EvntPacket::Singles* Singles );
         */

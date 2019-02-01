@@ -18,15 +18,20 @@
 TList* ConstructEng( TFileCollection* fc, std::string fCal)
 {
     //gSystem->Load("./libTXPConfig.so");
-    TXPConfig* XPConfig = new TXPConfig(fCal);
+    TXPConfig* XPConfig = new TXPConfig(fCal, "./XPConfigs/XPGeometry.txt" );
 
     //ROOT::EnableImplicitMT(4);
 
     TList* outlist = new TList();
-    TH2D* engMat = new TH2D("engMat", "Energy Matrix",
+    TH2D* engMat = new TH2D("engMat", "Energy HPGe Matrix",
+            98, 0, 98,
+            32767, 0, 16383);
+    TH2D* engAddMat = new TH2D("engAddMat", "Addback HPGe Energy Matrix",
             98, 0, 98,
             32767, 0, 16383);
     outlist->Add(engMat);
+    outlist->Add(engAddMat);
+
     TH2D* engMatVito = new TH2D("engMatVito", "Energy Matrix with vito",
             98, 0, 98,
             32767, 0, 16383);
@@ -35,9 +40,25 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
     TH1D* hSingles = new TH1D("hSingles", "#gamma HPGe singles",
             32767, 0, 16383);
     outlist->Add(hSingles);
+    
+    TH1D* hAddback = new TH1D("hAddback", "#gamma HPGe Addback",
+            32767, 0, 16383);
+    outlist->Add(hAddback);
+
+    TH1D* hSumCoincidence = new TH1D("hSumCoincidence", "#gamma Sum-Coincidence HPGe",
+            32767, 0, 16383);
+    outlist->Add(hSumCoincidence);
+    
+    TH1D* hOppAddback = new TH1D("hOppAddback", "180 Degree Coincidence Addback",
+            32767, 0, 16383);
+    outlist->Add(hOppAddback);
+
+    TH1D* hAddbackMultiplicity = new TH1D("hAddbackMultiplicity", "Addback muliplicity",
+            25, 0, 25);
+    outlist->Add(hAddbackMultiplicity);
 
     // ADC hit patterns
-    TH2D* adcMat = new TH2D("adcMat", "Hit Pattern",
+    TH2D* adcMat = new TH2D("adcMat", "Hit Pattern All Detectors",
             98, 0, 98,
             98, 0, 98);
     outlist->Add(adcMat);
@@ -54,6 +75,7 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
     TTreeReaderArray<int32_t> energy(TreeR, "energy");
     TTreeReaderArray<int16_t> adc(TreeR, "adc");
     TTreeReaderValue<int32_t> multiplicity(TreeR, "multiplicity");
+    TTreeReaderArray<int16_t> timeStamp(TreeR, "timeStamp");
     TTreeReaderValue<bool> CheckClean(TreeR, "isClean");
 
     bool vito = false;
@@ -61,6 +83,7 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
     int32_t charge;
     int16_t address;
     bool isClean;
+    EvntPacket::Addback* AddbackPacket;
     printf("Constructing energy matrix\n");
     while ( TreeR.Next() ) {
         isClean = *CheckClean;
@@ -88,7 +111,7 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
 
         // pattern generating
         for( int i = 0; i < multi; i++ )
-            for( int j = i; j < multi; j++ )
+            for( int j = i+1; j < multi; j++ )
             {
                 if( energy[i] > 32760 || energy[j] > 32760 )
                     continue; // skip overflow
@@ -101,6 +124,36 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
                 if( XPConfig->isBGO( adc[i] ) || XPConfig->isBGO( adc[j] ) )
                         adcMatBGO->Fill(adc[i], adc[j]);
             }
+
+        // Addback
+        AddbackPacket = XPConfig->Leaf2Addback( energy, adc, timeStamp, multi ); 
+        
+        for( int i = 0; i < AddbackPacket->multiplicity; i++ )
+        {
+            engAddMat->Fill( AddbackPacket->detectorNum[i],
+                   AddbackPacket->Energy[i] );
+            hAddback->Fill( AddbackPacket->Energy[i] );
+            if( AddbackPacket->groupedHitsNum[i] > 1 )
+                hSumCoincidence->Fill( AddbackPacket->Energy[i] );
+            hAddbackMultiplicity->Fill( AddbackPacket->groupedHitsNum[i] );
+        }
+
+        bool inFlag = false;
+        for( int i = 0; i < AddbackPacket->multiplicity; i++ )
+        {
+            inFlag = false;
+            for( int j = i + 1; j < AddbackPacket->multiplicity; j++ )
+                if( XPConfig->GetAngleDetec( AddbackPacket->detectorNum[i],
+                            AddbackPacket->detectorNum[j] ) > 3.10 ) // 180 degrees only
+                {
+                    hOppAddback->Fill( AddbackPacket->Energy[j] );
+                    inFlag = true;
+                }
+            if( inFlag )
+                hOppAddback->Fill( AddbackPacket->Energy[i] );
+        }
+
+        delete AddbackPacket;
     }
 
     delete XPConfig;

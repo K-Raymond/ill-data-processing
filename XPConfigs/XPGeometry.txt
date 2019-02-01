@@ -1,4 +1,4 @@
-# Geometry and detector configuration
+ Geometry and detector configuration
 # -1 marks unspecified detectors
 # index clov cryst
 0 0 0
