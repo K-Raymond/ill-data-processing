@@ -11,7 +11,11 @@ XPGeometry translates index numbers into detector numbers.
 
 Contains information about the specific geometry of the array as related to the index number from XPConfig. This allows to translate the index to a physical detector, and crystal position. Geometry information for detector positions is hard coded into TXPConfig.
 
+<<<<<<< HEAD
 ![Image of FIPPS+IFIN Array](../docs/images/CloverLabeling_ViewFromCasemateEntrance_b.png)
+=======
+![Image of FIPPS+IFIN Array](docs/images/CloverLabeling_ViewFromCasemateEntrance_b.png)
+>>>>>>> 5ed2999daa51a2834ae3e7214d6f5e6dc3ad84ee
 TODO: Add axis information which matches implimentation in `TXPConfig`.
 
 Ex,
