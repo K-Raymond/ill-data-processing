@@ -41,6 +41,7 @@ namespace EvntPacket {
         std::vector<int16_t> detectorNum;
         std::vector<int16_t> timeStamp; // timestamp of the first event
         std::vector<int16_t> groupedHitsNum;
+        std::vector<bool> isCompton; // true if BGO shield triggers
         int multiplicity;
     };
 
@@ -80,7 +81,7 @@ class TXPConfig : public TObject {
         // * BGO shields
         // * Detectors with Tr set to 0 (ie, bad channels)
 
-        bool isVito(int index); // returns true for all conditions
+        bool isVito(int index); // returns true if index is bad
         bool isBGO(int index)
             { if( fDetTypeVec[index] == -1) return true; return false; }
 

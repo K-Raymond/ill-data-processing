@@ -335,6 +335,8 @@ bool TXPConfig::isVito(int index)
         return false; // HPGe
     if( fDetTypeVec[index] == -1 )
         return true; // BGO Shield
+
+    return false; // Nothing bad, continue
 }
 
 void TXPConfig::setVitoDet( int index, bool state )
@@ -386,6 +388,11 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
     // same detector and the time difference between them is less than dT
     int16_t dT = 100;       // 10ns, coincidence dT
     EvntPacket::Addback* OutPacket = new EvntPacket::Addback();
+
+    // BGO information
+    
+    std::vector<int16_t> adcBGOVec;
+    std::vector<int16_t> timeStampBGOVec;
     
     bool inPacket = false; // Set true if partial event is already in packet
     for( int i = 0; i < multiplicity; i++ )
@@ -396,6 +403,20 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
             continue;
         if( Q[i] < 2 ) // skip underflow
             continue;
+
+        // BGO Vitoing:
+        // Collect all the BGO events here. After the Addback packet is
+        // computed, the packet will need to be checked against the BGO
+        // list.
+        //
+        // BGOs which match the clover number will set isCompton to true
+        int ggBGOdT =  200; // 10*ns
+        if( isBGO( adc[i] ) )
+        {
+            adcBGOVec.push_back( adc[i] );
+            timeStampBGOVec.push_back( timeStamp[i] );
+        }
+
         if( isVito( adc[i] ) ) // skip vito
             continue;
 
@@ -412,6 +433,9 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
                     inPacket = true;
                 }
         }
+
+        // Add the event as a new starting point if it isn't already
+        // inside an event packet.
         if( inPacket == false )
         {
             if( fIndex2Cryst[adc[i]] == -1 ) // Skip for unknown detectors
@@ -421,7 +445,20 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
             OutPacket->timeStamp.push_back( timeStamp[i] );
             OutPacket->multiplicity++;
             OutPacket->groupedHitsNum.push_back( 1 ); // first hit
+            OutPacket->isCompton.push_back(false);
         }
+
+        // Events which match BGO detector and are in coincidence
+        // are likely compton events scattered out of the clover.
+        for( int i = 0; i < OutPacket->multiplicity; i++ )
+            for( int j = 0; j < adcBGOVec.size(); j++ )
+            {
+                if( OutPacket->detectorNum[i] ==
+                        getDetNum( adcBGOVec[j] ) )
+                    if( abs( OutPacket->timeStamp[i] - 
+                                timeStampBGOVec[j] ) < ggBGOdT )
+                        OutPacket->isCompton[i] = true;
+            }
     }
 
     return OutPacket;

@@ -27,7 +27,7 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
             98, 0, 98,
             32767, 0, 16383);
     TH2D* engAddMat = new TH2D("engAddMat", "Addback HPGe Energy Matrix",
-            98, 0, 98,
+            15, 0, 15,
             32767, 0, 16383);
     outlist->Add(engMat);
     outlist->Add(engAddMat);
@@ -125,11 +125,14 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
                         adcMatBGO->Fill(adc[i], adc[j]);
             }
 
-        // Addback
+        // Build the addback evnt packet from the singles events
         AddbackPacket = XPConfig->Leaf2Addback( energy, adc, timeStamp, multi ); 
         
+        // build basic addback spectra
         for( int i = 0; i < AddbackPacket->multiplicity; i++ )
         {
+            if( AddbackPacket->isCompton[i] == true )
+                continue;
             engAddMat->Fill( AddbackPacket->detectorNum[i],
                    AddbackPacket->Energy[i] );
             hAddback->Fill( AddbackPacket->Energy[i] );
@@ -138,19 +141,23 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
             hAddbackMultiplicity->Fill( AddbackPacket->groupedHitsNum[i] );
         }
 
-        bool inFlag = false;
+        // Create an overall 180° addback spectrum
         for( int i = 0; i < AddbackPacket->multiplicity; i++ )
         {
-            inFlag = false;
+            if( AddbackPacket->isCompton[i] == true )
+                continue;
             for( int j = i + 1; j < AddbackPacket->multiplicity; j++ )
                 if( XPConfig->GetAngleDetec( AddbackPacket->detectorNum[i],
                             AddbackPacket->detectorNum[j] ) > 3.10 ) // 180 degrees only
                 {
-                    hOppAddback->Fill( AddbackPacket->Energy[j] );
-                    inFlag = true;
+                    // Check if the events are in coincidence
+                    if( abs( AddbackPacket->timeStamp[i] - 
+                                AddbackPacket->timeStamp[j] ) < 50 ) // *10ns
+                    {
+                        hOppAddback->Fill( AddbackPacket->Energy[j] );
+                        hOppAddback->Fill( AddbackPacket->Energy[i] );
+                    }
                 }
-            if( inFlag )
-                hOppAddback->Fill( AddbackPacket->Energy[i] );
         }
 
         delete AddbackPacket;

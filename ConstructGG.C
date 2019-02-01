@@ -152,7 +152,7 @@ static TList* TimingCoincidence( TFileCollection* fc )
     outList->Add(ggMatRandAddOpp);
     outList->Add(ggBSAddOpp);
 
-    TH1D* ggTimeDiffAddback = new TH1D("ggTimeDiff", "Addback #gamma-#gamma time difference",
+    TH1D* ggTimeDiffAddback = new TH1D("ggTimeDiffAddback", "Addback #gamma-#gamma time difference",
             511, 0, 4095);
     outList->Add(ggTimeDiffAddback);
 
@@ -211,13 +211,20 @@ static TList* TimingCoincidence( TFileCollection* fc )
 
         AddbackPkt = XPConfig->Leaf2Addback( energy, adc, timeStamp, eventMulti );
 
+        hAddbackEvntPacketSize->Fill( AddbackPkt->multiplicity );
+
         for( int i = 0; i < AddbackPkt->multiplicity; i++ )
         {
             for( int j = i+1; j < AddbackPkt->multiplicity; j++)
             {
+                if( AddbackPkt->isCompton[i] || AddbackPkt->isCompton[j] )
+                    continue; // skip over events marked as compton
+
+                // fill time diff
                 ggTimeDiffAddback->Fill( abs( 
                             AddbackPkt->timeStamp[i] - AddbackPkt->timeStamp[j]) );
 
+                // construct time random
                 if( isTimeRandom( AddbackPkt->timeStamp[i], AddbackPkt->timeStamp[j] ) )
                 {
                     ggMatRandAddback->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
@@ -227,6 +234,7 @@ static TList* TimingCoincidence( TFileCollection* fc )
                         ggMatRandAddOpp->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
                 }
 
+                // construct prompt
                 if( isTimePrompt( AddbackPkt->timeStamp[i], AddbackPkt->timeStamp[j] ) )
                 {
                     ggMatPromptAddback->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
