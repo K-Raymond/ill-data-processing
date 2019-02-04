@@ -67,6 +67,12 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
             98, 0, 98);
     outlist->Add(adcMatBGO);
 
+    // Timewalk
+    TH2D* timewalk = new TH2D("timewalk", "HPGe timestamp timewalk",
+            4095, 0, 4095, // keV
+            500, -1000, 1000);
+    outlist->Add(timewalk);
+
     // Load Lst2RootTree's into chain
     TChain* pChain = new TChain("Lst2RootTree");
     pChain->AddFileInfoList( fc->GetList() );
@@ -123,6 +129,34 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
                 // show which detectors are coincident with BGO's
                 if( XPConfig->isBGO( adc[i] ) || XPConfig->isBGO( adc[j] ) )
                         adcMatBGO->Fill(adc[i], adc[j]);
+                if( XPConfig->isHPGe( adc[i] ) &&
+                        XPConfig->isHPGe( adc[j] ) &&
+                        abs( timeStamp[i] - timeStamp[j] ) < 1000 ) // 10*ns
+                {
+                    int32_t min; int16_t timestampMin;
+                    int32_t max; int16_t timestampMax;
+                    int16_t adcmin;
+                    if( energy[i] > energy[j] )
+                    {
+                        min = energy[j];
+                        timestampMin = timeStamp[j];
+                        adcmin = adc[j];
+                        max = energy[i];
+                        timestampMax = timeStamp[i];
+                    }
+                    else
+                    {
+                        min = energy[i];
+                        timestampMin = timeStamp[i];
+                        adcmin = adc[i];
+                        max = energy[j];
+                        timestampMax = timeStamp[j];
+                    }
+
+                    if( max > 3600 ) // if max is >~1200 keV
+                        timewalk->Fill( XPConfig->GetEnergy( min, adcmin ),
+                                    timestampMin-timestampMax );
+                }
             }
 
         // Build the addback evnt packet from the singles events

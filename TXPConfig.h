@@ -82,6 +82,8 @@ class TXPConfig : public TObject {
         // * Detectors with Tr set to 0 (ie, bad channels)
 
         bool isVito(int index); // returns true if index is bad
+        bool isHPGe( int index)
+            { if( fDetTypeVec[index] == 1 ) return true; return false; }
         bool isBGO(int index)
             { if( fDetTypeVec[index] == -1) return true; return false; }
 
