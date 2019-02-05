@@ -12,6 +12,7 @@
 #include "THashList.h"
 #include "TThread.h"
 #include "TFile.h"
+#include "THnSparse.h"
 
 #include "./TXPConfig.h"
 #include "./progressThread.h"
@@ -128,6 +129,11 @@ static TList* TimingCoincidence( TFileCollection* fc )
     TH2D* ggMatPromptAddback = new TH2D("ggMatPromptAddback", "Addback Prompt #gamma-#gamma Coincidence",
             10000, 0, 10000,
             10000, 0, 10000);
+    Int_t Size = 2;
+    Int_t Bins[2] = {16000, 16000};
+    Double_t Min[2] = {0,0};
+    Double_t Max[2] = {12000,12000};
+    THnSparse* ggMatPASparse = new THnSparseD("ggMatPASparse", "Addback Prompt #gamma-#gamma Coincidence", Size, Bins, Min, Max);
     TH2D* ggMatRandAddback = new TH2D("ggMatRandAddback", "Addback Random #gamma-#gamma Coincidence",
             10000, 0, 10000,
             10000, 0, 10000);
@@ -135,8 +141,17 @@ static TList* TimingCoincidence( TFileCollection* fc )
             10000, 0, 10000,
             10000, 0, 10000);
     outList->Add(ggMatPromptAddback);
+    outList->Add(ggMatPASparse);
     outList->Add(ggMatRandAddback);
     outList->Add(ggBSAddback);
+
+
+    Int_t BSize = 3;
+    Int_t BBins[3] = {12000, 12000, 12000};
+    Double_t BMin[3] = {0,0,0};
+    Double_t BMax[3] = {12000,12000, 12000};
+    THnSparse* gggMatPA = new THnSparseD("gggMatPA", "Addback Prompt #gamma-#gamma Coincidence", BSize, BBins, BMin, BMax);
+    outList->Add(gggMatPA);
 
     // Opposite Addback matricies
     TH2D* ggMatPromptAddOpp = new TH2D("ggMatPromptAddOpp", "Addback Prompt #gamma-#gamma Coincidence Opposite Detectors",
@@ -238,10 +253,22 @@ static TList* TimingCoincidence( TFileCollection* fc )
                 if( isTimePrompt( AddbackPkt->timeStamp[i], AddbackPkt->timeStamp[j] ) )
                 {
                     ggMatPromptAddback->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
+                    Double_t FillEng2[2] = {AddbackPkt->Energy[i], AddbackPkt->Energy[j] };
+                    ggMatPASparse->Fill(FillEng2);
 
                     if( XPConfig->GetAngleDetec( AddbackPkt->detectorNum[i],
                                 AddbackPkt->detectorNum[j] ) )
                         ggMatPromptAddOpp->Fill( AddbackPkt->Energy[i], AddbackPkt->Energy[j] );
+                }
+
+                for( int k = j+1; k < AddbackPkt->multiplicity; k++ )
+                {
+                    if( isTimePrompt( AddbackPkt->timeStamp[i], AddbackPkt->timeStamp[j] ) &&
+                            isTimePrompt( AddbackPkt->timeStamp[j], AddbackPkt->timeStamp[k] ) )
+                    {
+                        Double_t FillEng[3] = {AddbackPkt->Energy[i], AddbackPkt->Energy[j], AddbackPkt->Energy[k]};
+                        gggMatPA->Fill( FillEng );
+                    }
                 }
             }
         }

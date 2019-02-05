@@ -386,7 +386,7 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
 {
     // Events in an event packet are grouped together if they are from the
     // same detector and the time difference between them is less than dT
-    int16_t dT = 100;       // 10ns, coincidence dT
+    int16_t dT = 80;       // 10ns, coincidence dT
     EvntPacket::Addback* OutPacket = new EvntPacket::Addback();
 
     // BGO information
@@ -410,7 +410,7 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
         // list.
         //
         // BGOs which match the clover number will set isCompton to true
-        int ggBGOdT =  200; // 10*ns
+        int ggBGOdT =  300; // 10*ns
         if( isBGO( adc[i] ) )
         {
             adcBGOVec.push_back( adc[i] );

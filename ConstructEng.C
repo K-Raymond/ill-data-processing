@@ -57,6 +57,13 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
             25, 0, 25);
     outlist->Add(hAddbackMultiplicity);
 
+    TH1D* hHPGeAC = new TH1D("hHPGeAC", "#gamma-HPGe AntiCoincidence",
+            32767, 0, 16383);
+    TH1D* hBGOAC = new TH1D("hBGOAC", "#gamma-BGO AntiCoincidence",
+            32767, 0, 16383);
+    outlist->Add(hHPGeAC);
+    outlist->Add(hBGOAC);
+
     // ADC hit patterns
     TH2D* adcMat = new TH2D("adcMat", "Hit Pattern All Detectors",
             98, 0, 98,
@@ -72,6 +79,15 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
             4095, 0, 4095, // keV
             500, -1000, 1000);
     outlist->Add(timewalk);
+    TH1D* tHPGe = new TH1D("tHPGe", "HPGe Timing",
+            2000, -4000, 4000);
+    TH1D* tHPGeBGO = new TH1D("tHPGeBGO", "BGO Timing reference to HPGe",
+            2000, -4000, 4000);
+    TH1D* tBGO = new TH1D("tBGO", "BGO-BGO Timing",
+            2000, -4000, 4000);
+    outlist->Add(tHPGe);
+    outlist->Add(tHPGeBGO);
+    outlist->Add(tBGO);
 
     // Load Lst2RootTree's into chain
     TChain* pChain = new TChain("Lst2RootTree");
@@ -126,9 +142,28 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
 
                 adcMat->Fill(adc[i], adc[j]);
 
+                if( XPConfig->isBGO( adc[i] ) && XPConfig->isHPGe( adc[j] ) )
+                {
+                    hHPGeAC->Fill( XPConfig->GetEnergy( energy[j], adc[j] ) );
+                    hBGOAC->Fill( XPConfig->GetEnergy( energy[i], adc[i] ) );
+                };
+
+
                 // show which detectors are coincident with BGO's
                 if( XPConfig->isBGO( adc[i] ) || XPConfig->isBGO( adc[j] ) )
+                {
                         adcMatBGO->Fill(adc[i], adc[j]);
+                }
+                // Timing information
+                if( XPConfig->isHPGe( adc[i] ) && XPConfig->isHPGe( adc[j] ) )
+                    tHPGe->Fill( timeStamp[j] - timeStamp[i] );
+                //if( (XPConfig->isHPGe( adc[i] ) && XPConfig->isBGO( adc[j] ) ) || 
+                //    (XPConfig->isBGO( adc[i] ) && XPConfig->isHPGe( adc[j] ) ) )
+                if ( XPConfig->isBGO( adc[i] ) && XPConfig->isHPGe( adc[j] ) )
+                    tHPGeBGO->Fill( timeStamp[j] - timeStamp[i] );
+                if( XPConfig->isBGO( adc[i] ) && XPConfig->isBGO( adc[j] ) )
+                    tBGO->Fill( timeStamp[j] - timeStamp[i] );
+
                 if( XPConfig->isHPGe( adc[i] ) &&
                         XPConfig->isHPGe( adc[j] ) &&
                         abs( timeStamp[i] - timeStamp[j] ) < 1000 ) // 10*ns
