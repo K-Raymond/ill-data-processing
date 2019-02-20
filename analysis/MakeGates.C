@@ -1,69 +1,56 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
+#include <stdio.h>
 
 #include "TROOT.h"
 #include "TFile.h"
 #include "TList.h"
 #include "TH1D.h"
 #include "TH2D.h"
+#include "TSpectrum.h"
 
 // Produce gated gamma spectra from gg matrix, peak energy (pE),
 // peak bounds (pLow & pHigh), and background bounds (bgLow & bgHigh)
-TH1* gMakeGate(TH2D* ggMat, int pE,  int pLow, int pHigh,
-        int pgLow, int pgHigh, int bgLow, int bgHigh)
+TH1* MakeGate(TH2D* ggMat, std::string type,
+        int pE,  int pLow, int pHigh, int bgLow, int bgHigh)
 {
-    std::cout << "Gamma Gate: " << pE << std::endl;
+    const char* prefix = type.c_str();
+    TSpectrum s;
+    char* title;
     // Create projections
-    TH1D* outGate = new TH1D(Form("g_%d",pE), 
-            Form("#gamma-gated on %d keV", pE), 12000, 0, 12000);
-    TH1D* outGate_pg = new TH1D(Form("g_%d_pg",pE), 
-            Form("#gamma-gated on %d keV", pE), 12000, 0, 12000);
-    TH1D* outGate_bg = new TH1D(Form("g_%d_bg",pE), 
-            Form("background #gamma-gated on %d keV", pE), 12000, 0, 12000);
-    ggMat->ProjectionX(Form("g_%d", pE), pLow, pHigh);
-    ggMat->ProjectionX(Form("g_%d_pg", pE), pgLow, pgHigh);
-    ggMat->ProjectionX(Form("g_%d_bg", pE), bgLow, bgHigh);
+    if( strncmp(prefix, "g", 1) == 0 )
+    {
+        title = Form("#gamma-gated on %d keV", pE);
+        std::cout << "Gamma Gate: " << pE << std::endl;
+    }
+    else if ( strncmp(prefix, "a", 1) == 0 )
+    {
+        title = Form("addback-gated on %d keV", pE);
+        std::cout << "Addback Gate: " << pE << std::endl;
+    }
+    else
+        title = Form("gated on %d keV", pE);
+
+    TH1D* outGate = new TH1D(Form("%s_%d", prefix, pE), 
+            title, 12000, 0, 12000);
+    TH1D* outGate_gate = new TH1D(Form("%s_%d_gate", prefix, pE), 
+            title, 12000, 0, 12000);
+
+    ggMat->ProjectionX(Form("%s_%d", prefix, pE), pLow, pHigh);
+    ggMat->ProjectionX(Form("%s_%d_gate", prefix, pE), bgLow, bgHigh);
 
     // Formating
     outGate->GetXaxis()->SetTitle("E [keV]");
     outGate->GetYaxis()->SetTitle("Counts/1 keV");
 
     // Construct gate and cleanup
-    outGate->Add(outGate_pg, -1); // remove peak background
-    outGate_bg->Add(outGate_pg, -1); // remove gate background
-    outGate->Add(outGate_bg, -1); // remove scatter peaks
-    delete outGate_bg;
-    delete outGate_pg;
-    return outGate;
-}
-
-// addback labeled equivilent
-TH1* aMakeGate(TH2D* ggMat, int pE,  int pLow, int pHigh,
-       int pgLow, int pgHigh, int bgLow, int bgHigh)
-{
-    std::cout << "Addback Gate: " << pE << std::endl;
-    // Create projections
-    TH1D* outGate = new TH1D(Form("a_%d",pE), 
-            Form("addback-gated on %d keV", pE), 12000, 0, 12000);
-    TH1D* outGate_pg = new TH1D(Form("a_%d_pg",pE), 
-            Form("addback-gated on %d keV", pE), 12000, 0, 12000);
-    TH1D* outGate_bg = new TH1D(Form("a_%d_bg",pE), 
-            Form("background addback-gated on %d keV", pE), 12000, 0, 12000);
-    ggMat->ProjectionX(Form("a_%d", pE), pLow, pHigh);
-    ggMat->ProjectionX(Form("a_%d_pg", pE), pgLow, pgHigh);
-    ggMat->ProjectionX(Form("a_%d_bg", pE), bgLow, bgHigh);
-
-    // Formating
-    outGate->GetXaxis()->SetTitle("E [keV]");
-    outGate->GetYaxis()->SetTitle("Counts per 1 keV");
-
-    // Construct gate and cleanup
-    outGate->Add(outGate_pg, -1); // remove peak background
-    outGate_bg->Add(outGate_pg, -1); // remove gate background
-    outGate->Add(outGate_bg, -1); // remove scatter peaks
-    delete outGate_bg;
-    delete outGate_pg;
+    outGate->Add(
+            s.Background(outGate, 35, "BackOrder4"), -1); // remove peak background
+    outGate_gate->Add(
+            s.Background(outGate_gate, 35, "BackOrder4"), -1); // remove gate background
+    outGate->Add(outGate_gate, -1); // remove scatter peaks
+    delete outGate_gate;
     return outGate;
 }
 
@@ -84,14 +71,20 @@ TList* MakeGates(std::string inFileName)
     TH2D* aaBS = (TH2D*) inFile->Get("ggBSAddback");
 
     // Generate gamma gates
-    goutList->Add(gMakeGate(ggBS, 446, 444, 447, 447, 450, 436, 439) );
-    goutList->Add(gMakeGate(ggBS, 1050, 1049, 1052, 1053, 1056, 1036, 1043) );
-    goutList->Add(gMakeGate(ggBS, 1230, 1229, 1231, 1238, 1240, 1222, 1225) );
-    goutList->Add(gMakeGate(ggBS, 3020, 3018, 3024, 3026, 3030, 3004, 3009) );
-    goutList->Add(gMakeGate(ggBS, 5970, 5969, 5980, 5987, 5994, 5931, 5938) );
-    goutList->Add(gMakeGate(ggBS, 6064, 6055, 6063, 6068, 6076, 6032, 6044) );
-    goutList->Add(gMakeGate(ggBS, 6110, 6108, 6116, 6122, 6129, 6081, 6092) );
-    goutList->Add(gMakeGate(ggBS, 6588, 6580, 6597, 6600, 6617, 6550, 6567) );
+    goutList->Add(MakeGate(ggBS, "g", 446, 444, 448, 439, 443) );
+    goutList->Add(MakeGate(ggBS, "g", 691, 690, 693, 686, 689) );
+    goutList->Add(MakeGate(ggBS, "g", 1050, 1046, 1055, 1030, 1039) );
+    goutList->Add(MakeGate(ggBS, "g", 1098, 1096, 1101, 1104, 1109) );
+    goutList->Add(MakeGate(ggBS, "g", 1230, 1227, 1233, 1212, 1218) );
+    goutList->Add(MakeGate(ggBS, "g", 1421, 1417, 1423, 1411, 1417) );
+    goutList->Add(MakeGate(ggBS, "g", 1700, 1697, 1703, 1704, 1710) );
+    goutList->Add(MakeGate(ggBS, "g", 1997, 1995, 2001, 1990, 1996) );
+    goutList->Add(MakeGate(ggBS, "g", 2022, 2020, 2025, 2013, 2018) );
+    goutList->Add(MakeGate(ggBS, "g", 5970, 5965, 5982, 5989, 6106) );
+    goutList->Add(MakeGate(ggBS, "g", 6064, 6051, 6068, 6029, 6045) );
+    goutList->Add(MakeGate(ggBS, "g", 6110, 6097, 6124, 6068, 6094) );
+    goutList->Add(MakeGate(ggBS, "g", 6588, 6574, 6606, 6532, 6563) );
+    goutList->Add(MakeGate(ggBS, "g", 6649, 6644, 6651, 6668, 6675) );
 
     // save gamma
     TDirectory* gGates = outFile->mkdir("gGates");
@@ -100,14 +93,20 @@ TList* MakeGates(std::string inFileName)
     goutList->Delete();
 
     // Make addback gates
-    aoutList->Add(aMakeGate(aaBS, 446, 444, 447, 447, 450, 436, 439) );
-    aoutList->Add(aMakeGate(aaBS, 1050, 1049, 1052, 1053, 1056, 1036, 1043) );
-    aoutList->Add(aMakeGate(aaBS, 1230, 1229, 1231, 1238, 1240, 1222, 1225) );
-    aoutList->Add(aMakeGate(aaBS, 3020, 3018, 3024, 3026, 3030, 3004, 3009) );
-    aoutList->Add(aMakeGate(aaBS, 5970, 5969, 5980, 5987, 5994, 5931, 5938) );
-    aoutList->Add(aMakeGate(aaBS, 6064, 6055, 6063, 6068, 6076, 6032, 6044) );
-    aoutList->Add(aMakeGate(aaBS, 6110, 6108, 6116, 6122, 6129, 6081, 6092) );
-    aoutList->Add(aMakeGate(aaBS, 6588, 6580, 6597, 6600, 6617, 6550, 6567) );
+    aoutList->Add(MakeGate(aaBS, "a", 446, 444, 448, 439, 443) );
+    aoutList->Add(MakeGate(aaBS, "a", 691, 690, 693, 686, 689) );
+    aoutList->Add(MakeGate(aaBS, "a", 1050, 1046, 1055, 1030, 1039) );
+    aoutList->Add(MakeGate(aaBS, "a", 1098, 1096, 1101, 1104, 1109) );
+    aoutList->Add(MakeGate(aaBS, "a", 1230, 1227, 1233, 1212, 1218) );
+    aoutList->Add(MakeGate(aaBS, "a", 1421, 1417, 1423, 1411, 1417) );
+    aoutList->Add(MakeGate(aaBS, "a", 1700, 1697, 1703, 1704, 1710) );
+    aoutList->Add(MakeGate(aaBS, "a", 1997, 1995, 2001, 1990, 1996) );
+    aoutList->Add(MakeGate(aaBS, "a", 2022, 2020, 2025, 2013, 2018) );
+    aoutList->Add(MakeGate(aaBS, "a", 5970, 5965, 5982, 5989, 6106) );
+    aoutList->Add(MakeGate(aaBS, "a", 6064, 6051, 6068, 6029, 6045) );
+    aoutList->Add(MakeGate(aaBS, "a", 6110, 6097, 6124, 6068, 6094) );
+    aoutList->Add(MakeGate(aaBS, "a", 6588, 6574, 6606, 6532, 6563) );
+    aoutList->Add(MakeGate(aaBS, "a", 6649, 6644, 6651, 6668, 6675) );
 
     // save addback
     TDirectory* aGates = outFile->mkdir("aGates");
@@ -116,6 +115,7 @@ TList* MakeGates(std::string inFileName)
     aoutList->Delete();
 
     inFile->Close();
+    outFile->Close();
 
     return aoutList;
 }
