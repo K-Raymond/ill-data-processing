@@ -132,12 +132,12 @@ static TList* TimingCoincidence( TFileCollection* fc )
     TH2D* ggMatRandAddback = new TH2D("ggMatRandAddback", "Addback Random #gamma-#gamma Coincidence",
             10000, 0, 10000,
             10000, 0, 10000);
-    TH2D* ggBSAddback = new TH2D("ggBSAddback", "Addback #gamma-#gamma Coincidence Background Subtracted",
+    TH2D* aaBS = new TH2D("aaBS", "Addback #gamma-#gamma Coincidence Background Subtracted",
             10000, 0, 10000,
             10000, 0, 10000);
     outList->Add(ggMatPromptAddback);
     outList->Add(ggMatRandAddback);
-    outList->Add(ggBSAddback);
+    outList->Add(aaBS);
 
 
 
@@ -263,8 +263,8 @@ static TList* TimingCoincidence( TFileCollection* fc )
     ggBS->Add(ggMatPrompt);
     ggBS->Add(ggMatRand, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
 
-    ggBSAddback->Add(ggMatPromptAddback);
-    ggBSAddback->Add(ggMatRandAddback, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
+    aaBS->Add(ggMatPromptAddback);
+    aaBS->Add(ggMatRandAddback, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
 
     ggBSAddOpp->Add(ggMatPromptAddOpp);
     ggBSAddOpp->Add(ggMatRandAddOpp, -abs(ggTHigh-ggTLow)/abs(ggBTHigh-ggBTLow));
