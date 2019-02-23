@@ -22,6 +22,8 @@ static long long int TotalEntries;
 static long long int PartialEntries;
 static bool GO = true;
 
+// TODO: Move progress related functions/operations to progressThread
+// and rename progressThread to TProgressViewer
 static void* UpdateProgress(void *ptr)
 {
     while( GO == true )
