@@ -15,7 +15,6 @@
 #include "THnSparse.h"
 
 #include "./TXPConfig.h"
-#include "./progressThread.h"
 
 // Global Variables for this file
 static long long int TotalEntries;

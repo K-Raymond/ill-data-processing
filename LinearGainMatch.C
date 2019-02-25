@@ -1,21 +1,32 @@
 #include <vector>
+#include <string>
+
+#include "TH2.h"
+#include "TROOT.h"
+#include "TFile.h"
+#include "TSpectrum.h"
+#include "TPeak.h"
+#include "TCanvas.h"
+
+#include "./TXPConfig.h"
+
 
 void LinearGainMatch( TH2* mat_en, double peak1 = 344.28, double width1 = 20,
         double peak2 = 344.28, double width2 = 20, std::string fCal = "./XPConfig.txt" ) {
     // Two points for rough gain match
-    // Eu152 main peaks
     double_t gCalPeaks[2][2] = { {peak1, width1}, {peak2, width2} };
+    // Eu152 main peaks
     //double_t gCalPeaks[2][2] = { {344.28, 20}, {1408.0, 20} };
     double_t MeasuredPeaks[2];
     
-    gSystem->Load("./libTXPConfig.so");
-    TXPConfig* pChannel = new TXPConfig(fCal);
+    TXPConfig* XPConfig = new TXPConfig(fCal);
     
     vector<double_t> newCal0;
     vector<double_t> newCal1;
 
-    for (int i = 0; i < pChannel->NChan() ; i++ )
-    {
+    for (int i = 0; i < XPConfig->NChan() ; i++ )
+    {   
+        printf("Fitting channel %d", i);
         TH1D *h_en = mat_en->ProjectionY(Form("h_%.2i", i), i + 1, i + 1);
         if( h_en == nullptr )
         {
@@ -37,7 +48,7 @@ void LinearGainMatch( TH2* mat_en, double peak1 = 344.28, double width1 = 20,
             TPeak* TempP = new TPeak(SpecPeak, SpecPeak - gCalPeaks[k][1],
                     SpecPeak + gCalPeaks[k][1] );
 
-            TempP->Fit(h_en,"MQ");
+            TempP->Fit(h_en,"MQ, SAME");
             MeasuredPeaks[k] = TempP->GetCentroid();
             delete TempP;
         }
@@ -55,8 +66,8 @@ void LinearGainMatch( TH2* mat_en, double peak1 = 344.28, double width1 = 20,
         double_t ChargePeaks[2];
 
         // Recall previous coeff
-        double_t oldOffset = pChannel->GetCal(0, i);
-        double_t oldSlope = pChannel->GetCal(1, i);
+        double_t oldOffset = XPConfig->GetCal(0, i);
+        double_t oldSlope = XPConfig->GetCal(1, i);
         for ( int k = 0; k < 2 ; k++ )
         {
             ChargePeaks[k] = ( MeasuredPeaks[k] - oldOffset ) / oldSlope;
@@ -71,12 +82,20 @@ void LinearGainMatch( TH2* mat_en, double peak1 = 344.28, double width1 = 20,
         newCal1.push_back(newSlope);
     }
    
-    for( int i = 0; i < newCal0.size(); i++ )
+    for( unsigned int i = 0; i < newCal0.size(); i++ )
     {
         // nCoeff, nDet, Coeff
-        pChannel->SetCal(0, i, newCal0[i]);
-        pChannel->SetCal(1, i, newCal1[i]);
+        XPConfig->SetCal(0, i, newCal0[i]);
+        XPConfig->SetCal(1, i, newCal1[i]);
     }
 
-    pChannel->exportCal("XPLinear.txt");
+    XPConfig->exportCal("XPLinear.txt");
+}
+
+void LinearGainMatch( std::string RootFile, double peak1, double width1,
+        double peak2, double width2)
+{
+    TFile* inFile = new TFile( RootFile.c_str() );
+    TH2* engMat = (TH2D*) inFile->Get("engMat");
+    LinearGainMatch( engMat, peak1, width1, peak2, width2, "./XPConfig.txt");
 }

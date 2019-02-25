@@ -1,14 +1,12 @@
-all: TXPConfig progressThread
+all: TXPConfig TProgView
 
 TXPConfig:
 	genreflex TXPConfig.h --rootmap TXPConfig.rootmap
 	g++ -std=c++11 -shared -fPIC -o libTXPConfig.so TXPConfig.cpp TXPConfig_rflx.cpp `root-config --cflags --libs`
 
-progressThread:
-	genreflex progressThread.h --rootmap progressThread.rootmap
-	g++ -std=c++11 -fopenmp -shared -fPIC -o libprogressThread.so progressThread.cpp progressThread_rflx.cpp `root-config --cflags --libs`
+TProgView:
+	ge TProgView.h --rootmap TProgView.rootmap
+	g++ -std=c++11 -shared -fPIC -o libTProgView.so TProgView.cpp TProgView_rflx.cpp `root-config --cflags --libs`
 
 clean:
-	rm libTXPConfig.so
-	rm TXPConfig_*
-	*.rootmap
+	rm *_rflx.cpp *_rflx_rdict.pcm *_C.d *_C_ACLiC_dict_rdict.pcm *.rootmap *.so
