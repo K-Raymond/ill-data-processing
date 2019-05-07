@@ -356,7 +356,6 @@ EvntPacket::Singles* TXPConfig::Leaf2Singles( TTreeReaderArray<int32_t> &Q,
         int multiplicity)
 {
     EvntPacket::Singles* OutPacket = new EvntPacket::Singles();
-    OutPacket->multiplicity = multiplicity;
 
     for( int i =0; i < multiplicity; i++ )
     {
@@ -377,6 +376,8 @@ EvntPacket::Singles* TXPConfig::Leaf2Singles( TTreeReaderArray<int32_t> &Q,
         OutPacket->timeStamp.push_back( timeStamp[i] );
     }
 
+    OutPacket->multiplicity = OutPacket->Energy.size();
+
     return OutPacket;
 }
 
@@ -388,6 +389,7 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
     // same detector and the time difference between them is less than dT
     int16_t dT = 80;       // 10ns, coincidence dT
     EvntPacket::Addback* OutPacket = new EvntPacket::Addback();
+    OutPacket->multiplicity = 0;
 
     // BGO information
     
@@ -401,7 +403,7 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
         
         if( Q[i] > 32760 ) // Skip overflow
             continue;
-        if( Q[i] < 2 ) // skip underflow
+        if( Q[i] < 2 ) // Skip underflow
             continue;
 
         // BGO Vitoing:
@@ -410,7 +412,7 @@ EvntPacket::Addback* TXPConfig::Leaf2Addback( TTreeReaderArray<int32_t> &Q,
         // list.
         //
         // BGOs which match the clover number will set isCompton to true
-        int ggBGOdT =  300; // 10*ns
+        int ggBGOdT =  300; // ns
         if( isBGO( adc[i] ) )
         {
             adcBGOVec.push_back( adc[i] );

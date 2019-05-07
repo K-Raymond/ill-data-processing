@@ -89,6 +89,17 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
     outlist->Add(tHPGeBGO);
     outlist->Add(tBGO);
 
+    // Pileup Spectra
+    TH1D* hPU10 = new TH1D("hPU10", "#gamma HPGe Pileup 10ns",
+            32767, 0, 16383);
+    TH1D* hPU100 = new TH1D("hPU100", "#gamma HPGe Pileup 100ns",
+            32767, 0, 16383);
+    TH1D* hPU1000 = new TH1D("hPU1000", "#gamma HPGe Pileup 1000ns",
+            32767, 0, 16383);
+    outlist->Add(hPU10);
+    outlist->Add(hPU100);
+    outlist->Add(hPU1000); 
+
     // Load Lst2RootTree's into chain
     TChain* pChain = new TChain("Lst2RootTree");
     pChain->AddFileInfoList( fc->GetList() );
@@ -148,7 +159,6 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
                     hBGOAC->Fill( XPConfig->GetEnergy( energy[i], adc[i] ) );
                 };
 
-
                 // show which detectors are coincident with BGO's
                 if( XPConfig->isBGO( adc[i] ) || XPConfig->isBGO( adc[j] ) )
                 {
@@ -164,6 +174,27 @@ TList* ConstructEng( TFileCollection* fc, std::string fCal)
                 if( XPConfig->isBGO( adc[i] ) && XPConfig->isBGO( adc[j] ) )
                     tBGO->Fill( timeStamp[j] - timeStamp[i] );
 
+                // Pileup Spectra
+                if( adc[i] == adc[j] )
+                {
+                    if( abs( timeStamp[i] - timeStamp[j] ) > 10 ) // 10*ns
+                    {
+                        hPU10->Fill( XPConfig->GetEnergy( energy[j], adc[j] ) );
+                        hPU10->Fill( XPConfig->GetEnergy( energy[i], adc[i] ) );
+                    }
+                    if( abs( timeStamp[i] - timeStamp[j] ) > 100 ) // 10*ns
+                    {
+                        hPU100->Fill( XPConfig->GetEnergy( energy[j], adc[j] ) );
+                        hPU100->Fill( XPConfig->GetEnergy( energy[i], adc[i] ) );
+                    }
+                    if( abs( timeStamp[i] - timeStamp[j] ) > 1000 ) // 10*ns
+                    {
+                        hPU1000->Fill( XPConfig->GetEnergy( energy[j], adc[j] ) );
+                        hPU1000->Fill( XPConfig->GetEnergy( energy[i], adc[i] ) );
+                    }
+                }
+
+                // Create Time walk matrix
                 if( XPConfig->isHPGe( adc[i] ) &&
                         XPConfig->isHPGe( adc[j] ) &&
                         abs( timeStamp[i] - timeStamp[j] ) < 1000 ) // 10*ns
