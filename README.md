@@ -14,13 +14,14 @@ The ROOT macros and `TXPConfig` are intended to be used alongside the package of
 
 4. Use `LinearGainMatch.C` to make `XPLinear.txt`. The following transition energies can be used depending on the source.
 
-...| Isotope | Energy | Notes |
-...| <sup>152</sup>Eu | 121.7817 (3) keV | |
-...|                  | 1408.013 (3) keV | |
-...| <sup>28</sup>Al  | 1778.987 (15) keV | Beta Decay of <sup>28</sup>Al |
-...|                  | 7724.034 (7) keV  | |
+| Isotope | Energy | Notes |
+| ------- | ------ | ----- |
+| <sup>152</sup>Eu | 121.7817 (3) keV |  |
+|                  | 1408.013 (3) keV |  |
+| <sup>28</sup>Al  | 1778.987 (15) keV | Beta Decay of <sup>28</sup>Al |
+|                  | 7724.034 (7) keV  |  |
 
-...When satisfied with the linear gain match. Save `XPLinear.txt` as `XPConfig.txt` in the `XPConfigs/` folder
+When satisfied with the linear gain match. Save `XPLinear.txt` as `XPConfig.txt` in the `XPConfigs/` folder
 
 5. Fill out the `XPGeometry.txt` LUT located in `XPConfigs/` according to your experiment.
 
