@@ -13,12 +13,6 @@
 #include "TRandom.h"
 #include "TObject.h"
 
-// Enumerator for choosing which type of energy calibration
-enum CalType {
-    LINEAR,
-    QUADRADIC
-};
-
 // Event packet definitions for events processed with TXPConfig
 namespace EvntPacket {
     // Singles events are events with the charge transformed into
@@ -72,9 +66,16 @@ class TXPConfig : public TObject {
         int getCrystNum( int index );
 
         /* == Energy calibration functions == */
-        double_t GetEnergy(int32_t &Q, short &index, CalType Interpol = LINEAR );
+        double_t GetEnergy(int32_t &Q, short &index);
         double_t GetCal( int nCoeff, int index );
         void SetCal( int nCoeff, int index , double_t Coeff);
+
+        /* == Gain Matching Functions == */
+        int loadGainMatch( std::string GainMatchFileLoc );
+        void exportGainMatch( std::string GainMatchFileLoc );
+        void SetGainMatchForIndex( int index, double_t offset, double_t slope );
+        void deleteGainMatchForIndex( int index );
+        void deleteGainMatch( );
 
         /* == Functions for vetoing detector events == */
         // The following detectors should be vitoed:
@@ -109,7 +110,7 @@ class TXPConfig : public TObject {
     private:
         // Calibration coefficents for
         // Cal0 + Cal1*Q = E
-        bool fhasEngCalibration;
+        bool fhasEngCalibration = false;
         std::vector<double_t> fCal0Vec;
         std::vector<double_t> fCal1Vec;
         std::vector<double_t> fCal2Vec;
@@ -118,11 +119,17 @@ class TXPConfig : public TObject {
         std::vector<bool> fvitoVec; 
         std::vector<int> fisTrVec;
 
+        // Gain Match Information
+        bool fhasGainMatch = false;
+        std::vector<double_t> fGainMatchOffsetVec;
+        std::vector<double_t> fGainMatchSlopeVec;
+        void CreateEmptyGainMatch();
+
         // Detector type
         std::vector<int> fDetTypeVec;
 
         // Geometry
-        bool fhasGeometry;
+        bool fhasGeometry = false;
         std::vector<int> fIndex2Clover;
         std::vector<int> fIndex2Cryst;
         TVector3 fDetPositions[16];

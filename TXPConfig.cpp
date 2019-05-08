@@ -276,22 +276,22 @@ double_t TXPConfig::GetAngleDetec( int nDet1, int nDet2 ) {
 }
 
 // Convert charge Q to an energy value
-double_t TXPConfig::GetEnergy(int32_t &Q, short &index, CalType Interpol)
+double_t TXPConfig::GetEnergy(int32_t &Q, short &index)
 {
     //double_t E = (double_t)Q + (double_t)rand()/( (double_t)RAND_MAX + 1.0);
     double_t E = (double_t)Q + gRandom->Uniform();
-    switch(Interpol)
-    {
-        case LINEAR:
-            return fCal0Vec[index] + fCal1Vec[index]*E;
 
-        case QUADRADIC:
-            if ( fCal2Vec.size() == 0 )
-            {
-                printf("No information for 2nd calibration number\n");
-                return 0.0;
-            }
-            return fCal0Vec[index] + fCal1Vec[index]*E + fCal2Vec[index]*E*E;
+    // Check for Gain matching
+    // TODO: Add residual corrections
+
+    if( fhasGainMatch == 0 ) // Bin -> Energy
+    {
+        return fCal0Vec[index] + fCal1Vec[index]*E;
+    }
+    else
+    {
+        return (fCal0Vec[index]+fCal1Vec[index]*fGainMatchOffsetVec[index])
+            + (fCal1Vec[index]*fGainMatchSlopeVec[index])*E;
     }
 }
 
@@ -349,6 +349,130 @@ int TXPConfig::NChan()
     return fCal0Vec.size();
 }
 
+/* == Gain Matching Functions == */
+
+int TXPConfig::loadGainMatch(std::string GainMatchFileLoc )
+{
+    std::ifstream GainMatchFile(GainMatchFileLoc);
+    if( !GainMatchFile.is_open() )
+    {
+        printf("Failed to open gain match file at %s\n", GainMatchFileLoc.c_str() );
+        return EXIT_FAILURE;
+    }
+
+    // If gain matching already exists, destroy it
+    if( fhasGainMatch == true )
+        deleteGainMatch();
+
+    std::string Line;
+    std::istringstream LineStream;
+
+    // Variables for holding all the columns in XPConfig
+    int index;
+    double_t slope;
+    double_t offset;
+
+    while( getline( GainMatchFile, Line ) )
+    {
+        // Check to see if the line is a comment
+        if( Line.find('#') != std::string::npos )
+        {
+            continue; // Skip this line
+        }
+        LineStream.str(Line); // set stream to Line
+
+        //#index, offset, slope
+        LineStream >> index >> offset >> slope;
+
+        fGainMatchOffsetVec.push_back(offset);
+        fGainMatchSlopeVec.push_back(slope);
+
+        LineStream.clear();
+    }
+    fhasGainMatch = true;
+    printf("Loaded in %d channels\n", (int) fGainMatchOffsetVec.size() );
+    return EXIT_SUCCESS;
+}
+
+void TXPConfig::exportGainMatch(std::string GainMatchFileLoc)
+{
+    if( !fhasGainMatch )
+    {
+        printf("TXPConfig: No gain match information!\n");
+        return;
+    }
+
+    std::ofstream GMOut;
+    GMOut.open( GainMatchFileLoc );
+    if( !GMOut )
+    {
+        printf("exportGainMatch: Could not open %s\n", GainMatchFileLoc.c_str() );
+        return;
+    }
+
+    // Standard header
+    GMOut << "#index offset slope" << std::endl;
+
+    // For the XPConfig, cal0*x + cal1 rather than the standard polynomial
+    // notation.
+    for( int i = 0; i < fGainMatchOffsetVec.size(); i++ )
+    {
+        GMOut << i << " ";
+        GMOut << fGainMatchOffsetVec[i] << " ";
+        GMOut << fGainMatchSlopeVec[i]; // isTr
+        GMOut << std::endl;
+    }
+
+    GMOut.close();
+    return;
+}
+
+void TXPConfig::deleteGainMatch()
+{
+    if( fhasGainMatch == true )
+    {
+        fGainMatchOffsetVec.clear();
+        fGainMatchOffsetVec.clear();
+    }
+
+    fhasGainMatch = false;
+}
+
+// Create default values of size of the basic calibration file
+void TXPConfig::CreateEmptyGainMatch()
+{
+    if( fhasGainMatch == true )
+        deleteGainMatch();
+
+    for( unsigned int i = 0;  i < fCal0Vec.size(); i++ )
+    {
+        fGainMatchOffsetVec.push_back(0.0);
+        fGainMatchOffsetVec.push_back(1.0);
+    }
+
+    fhasGainMatch = true;
+}
+
+void TXPConfig::SetGainMatchForIndex( int index, double_t offset, double_t slope )
+{
+    if( fhasGainMatch == false )
+       CreateEmptyGainMatch();
+
+    fGainMatchOffsetVec[index] = offset;
+    fGainMatchSlopeVec[index] = slope;
+}
+
+void TXPConfig::deleteGainMatchForIndex( int index )
+{
+    if( fhasGainMatch == false )
+    {
+        CreateEmptyGainMatch();
+        return;
+    }
+
+    fGainMatchOffsetVec[index] = 0.0;
+    fGainMatchSlopeVec[index] = 1.0;
+}
 
 /* == Processing functions == */
 EvntPacket::Singles* TXPConfig::Leaf2Singles( TTreeReaderArray<int32_t> &Q,

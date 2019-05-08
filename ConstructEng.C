@@ -279,7 +279,7 @@ TList* ConstructEng( std::string TFileList )
 {
     TFileCollection* fc = new TFileCollection( "RootFileList",
             "", TFileList.c_str() );
-    return ConstructEng( fc, "./XPConfig.txt");
+    return ConstructEng( fc, "./XPConfigs/XPConfig.txt");
 }
 
 int ConstructEng2File( std::string FileList, std::string OutputFile )

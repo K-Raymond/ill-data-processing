@@ -5,7 +5,7 @@ TXPConfig:
 	g++ -std=c++11 -shared -fPIC -o libTXPConfig.so TXPConfig.cpp TXPConfig_rflx.cpp `root-config --cflags --libs`
 
 TProgView:
-	ge TProgView.h --rootmap TProgView.rootmap
+	genreflex TProgView.h --rootmap TProgView.rootmap
 	g++ -std=c++11 -shared -fPIC -o libTProgView.so TProgView.cpp TProgView_rflx.cpp `root-config --cflags --libs`
 
 clean:

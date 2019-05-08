@@ -108,15 +108,16 @@ std::tuple<std::vector<double_t>, std::vector<double_t>> CalibrateFile( std::str
         newCal1.push_back(a1);
 	}
 
-    printf("OUTPUTTING CALIBRATIONS TO: %s", Form("%s%s", Output.c_str(), RootF.c_str() ));
+    // Export the calibrations in order to shift the peaks to the specified positions
+    printf("OUTPUTTING CALIBRATIONS TO: %s\n", Form("%s%s", Output.c_str(), RootF.c_str() ));
     std::ofstream OutFile;
     OutFile.open(Form("%s%s.txt", Output.c_str(), RootF.c_str()));
-    OutFile << "#index   a0  a1" << std::endl;
+    OutFile << "#index offset slope" << std::endl;
     for( unsigned int i = 0; i < newCal0.size(); i++ )
     {
         // nCoeff, nDet, Coeff
-        OutFile << i << ", ";
-        OutFile << newCal0[i] << ", ";
+        OutFile << i << " ";
+        OutFile << newCal0[i] << " ";
         OutFile << newCal1[i] << std::endl;
     }
 
@@ -160,7 +161,7 @@ void GainMatchRoots( std::string LotOfFiles, std::string OutputDir )
 {
     std::ifstream inputStream(LotOfFiles);
     std::string line;
-    TXPConfig* XPConfig = new TXPConfig("./XPConfig.txt", "./XPConfigs/XPGeometry.txt");
+    TXPConfig* XPConfig = new TXPConfig("./XPConfigs/XPConfig.txt", "./XPConfigs/XPGeometry.txt");
 
     TList* outList = new TList();
     TH1* hSingles = new TH1D("hSingles", "#gamma HPGe singles", 32767, 0, 16383);
@@ -176,20 +177,22 @@ void GainMatchRoots( std::string LotOfFiles, std::string OutputDir )
 
     EvntPacket::Addback* AddbackPkt;
     EvntPacket::Singles* SinglesPkt;
+
+    // calibrate 28Al
+    double FitPeak1 = 5134; double FitPeak1Eng = 1778.987;
+    double FitPeak2 = 23200; double FitPeak2Eng = 7724.034;
+    int Peak1Bound = 2700; int Peak2Bound = 5000;
+
+    double SetSlope = (FitPeak2Eng - FitPeak1Eng)/( FitPeak2 - FitPeak1 );
+    double SetOffset = FitPeak1Eng - (SetSlope*FitPeak1);
+
     while(std::getline(inputStream, line).good())
     {
         if( fileExists(Form("%sXP%s.txt", OutputDir.c_str(), line.c_str() )))
                 continue;
 
-        // calibrate Sn116
-        // Fit peak at 1500, and third peak at 22485
-        double FitPeak1 = 5134; double FitPeak1Eng = 1778.987;
-        double FitPeak2 = 23200; double FitPeak2Eng = 7724.034;
-
         // Align Spectra to FitPeak1 and FitPeak2
-        auto output = CalibrateFile( line, OutputDir, FitPeak1, 2700, FitPeak2, 5000 , 2);
-        double SetSlope = (FitPeak2Eng - FitPeak1Eng)/( FitPeak2 - FitPeak1 );
-        double SetOffset = FitPeak1Eng - (SetSlope*FitPeak1);
+        auto output = CalibrateFile( line, OutputDir, FitPeak1, Peak1Bound, FitPeak2, Peak2Bound , 2);
 
         // Calculate new coeff based on this calbration
         for( unsigned int i = 0; i < std::get<0>(output).size(); i++ )
@@ -197,6 +200,8 @@ void GainMatchRoots( std::string LotOfFiles, std::string OutputDir )
             XPConfig->SetCal(0, i, SetSlope*std::get<0>(output).at(i)+SetOffset);
             XPConfig->SetCal(1, i, SetSlope*std::get<1>(output).at(i) );
         }
+
+        XPConfig->exportCal(Form("%sXP%s.txt", OutputDir.c_str(), line.c_str() ));
 
         printf("GRABBING TREE\n");
         TFile* inFile = new TFile(Form("/data3/ill_sn120/Al28/rootfiles/%s.root", line.c_str() ));
